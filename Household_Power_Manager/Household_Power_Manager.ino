@@ -19,10 +19,10 @@
 #include "ESP8266WiFiGeneric.h"
 #include "ESP8266WiFiAP.h"
 #include "ESP8266WiFi.h"
+#include "FS.h"
 #include "rebuild_received_anything.h"
 
 //Special Data Types
-
 //Scheduling Information Structure
 struct scheduling_information { //Declare scheduling_information struct type
 	int ID; //Device ID
@@ -30,11 +30,12 @@ struct scheduling_information { //Declare scheduling_information struct type
 };
 //Time and Date Structure
 struct time_and_date { //Declare time_and_date struct type
-	int month;
-	int day;
-	int hour;
-	int minute;
-	int second;
+	uint16_t year;
+	uint8_t month;
+	uint8_t dayOfMonth;
+	uint8_t hour;
+	uint8_t minute;
+	uint8_t second;
 };
 //Power Measurement Structure
 struct power_measurement { //Declare power_measurement struct type
@@ -50,6 +51,9 @@ struct major_appliance_status { //Declare major_appliance_status struct type
 
 //Definitions
 	#define BAUD 115200
+	//Device IDs
+	#define Total_Household 0
+	#define Major_Appliance 1
 	//Modes
 	#define Setup_Mode 0
 	#define Normal_Mode 1
@@ -90,19 +94,22 @@ struct major_appliance_status { //Declare major_appliance_status struct type
 	bool Statuses[2] = {};
 	WiFiClient client;
 	RtcDS3231 Rtc;
+	FSInfo fs_info;
 
 // the setup function runs once when you press reset or power the board
 void setup() {
+	Serial.begin(BAUD);
 	//Hardware Setup, pin modes etc.
 	pinMode(SetupModeButton, INPUT);
 	RTC_SETUP();
+	File_System_Setup();
 	//Software Setup
 	Operating_Mode = Normal_Mode; 
 }//End setup();
 
 // the loop function runs over and over again until power down or reset
 void loop() {
-	Serial.begin(BAUD);
+	//Serial.begin(BAUD);
 	delay(10);
 	//Check if User is Requesting SetupMode
 	if (!digitalRead(SetupModeButton)) {
@@ -208,10 +215,13 @@ void loop() {
 	case Normal_Mode:
 	{
 		Send_Receive_Protocol();
-		time_test();
-		//scheduling_information firstschedule;
-		//Serial.println(sizeof(firstschedule));
-		delay(1000);
+		//time_test();
+		float measurement = 22.5;
+		int ID = Major_Appliance;
+		//Store_power_measurement(measurement, ID);
+		//Display_Measurements();
+
+		delay(1500);
 		break;
 	}//End Normal Mode
 	}//End Switch(Operating_Mode)
@@ -530,31 +540,31 @@ int Data_Identification_Protocol(byte *Bytes_of_Data_In, int &no_of_Bytes_Receiv
 //|CM| Command Processing
 int process_received_command(byte *Data_Payload, int &Num_Bytes_in_Payload)
 {
-	String Command = "";
-	for (int i = 0; i < Num_Bytes_in_Payload; i++)
-	{
-		Command += (char)Data_Payload[i];
-	}
-	Serial.print("Command to Process is: ");
-	Serial.println(Command);
-	if (Command == "Send")
-		return Send_Data_To_Server;
-	else if (Command == "Receive")
-		return Receive_Data_From_Server;
-	else if (Command == "RunSched") {
-		Serial.println("Server says to Run Schedule");
-		return No_Command;
-	}
-	else if (Command == "OFF") {
-		Serial.println("Server says to Turn OFF Major Appliance");
-		return No_Command;
-	}
-	else if (Command == "ON") {
-		Serial.println("Server says to Turn ON Major Appliance");
-		return No_Command;
-	}
-	else
-		return No_Command;
+String Command = "";
+for (int i = 0; i < Num_Bytes_in_Payload; i++)
+{
+	Command += (char)Data_Payload[i];
+}
+Serial.print("Command to Process is: ");
+Serial.println(Command);
+if (Command == "Send")
+return Send_Data_To_Server;
+else if (Command == "Receive")
+return Receive_Data_From_Server;
+else if (Command == "RunSched") {
+	Serial.println("Server says to Run Schedule");
+	return No_Command;
+}
+else if (Command == "OFF") {
+	Serial.println("Server says to Turn OFF Major Appliance");
+	return No_Command;
+}
+else if (Command == "ON") {
+	Serial.println("Server says to Turn ON Major Appliance");
+	return No_Command;
+}
+else
+return No_Command;
 }
 //|SI| Scheduling Processing
 void process_received_schedule(byte *Data_Payload, int &Num_Bytes_in_Payload)
@@ -571,14 +581,145 @@ void process_received_time(byte *Data_Payload, int &Num_Bytes_in_Payload)
 	Serial.println("Processing a Time...");
 }
 
+void Display_Measurements(void)
+{
+	power_measurement measurement_to_send; //Structure for Measurement
+	byte *ptr_to_measurement_to_send_bytes = (byte*)(void*)(&measurement_to_send);
+	
+	Dir dir = SPIFFS.openDir("/Measurements");
+	Serial.println("Measurements Directory Contains: ");
+	while(dir.next()) {
+		Serial.print("File: ");
+		Serial.println(dir.fileName());
+		
+		File f = dir.openFile("r");
+		if (!f) {  //Check if File Opened Successfully
+			Serial.println("file open failed");
+		}
+		else { //If it Did then Reconstruct Measurement Structure
+			for (int i = 0; i < sizeof(measurement_to_send); i++)
+			{
+				ptr_to_measurement_to_send_bytes[i] = f.read();
+			}
+			Serial.print("With Measurement Value: ");
+			Serial.println(measurement_to_send.measurement);
+			Serial.println("");
+		}
+	}
+}
+
+bool Check_if_new_measurements_to_send(void)
+{
+	Dir dir = SPIFFS.openDir("/Measurements");
+	if (dir.next()) { //Check for any files in directory Power_Readings
+		return true;
+	}
+	return false;
+}
+
+void Store_power_measurement(float &measurement, int &ID)
+{
+	power_measurement measurement_to_store; //Structure for Measurement
+	RtcDateTime now = Rtc.GetDateTime();    //Get Time Measurement is Made (stored)
+
+	SPIFFS.info(fs_info); //Check how much memory is left
+	if (fs_info.totalBytes > (fs_info.usedBytes + 100)) {
+		Serial.println("There is No More Memory available!!");
+		return;
+	}
+
+	measurement_to_store.measurement = measurement;
+	measurement_to_store.when_made.year = now.Year();
+	measurement_to_store.when_made.month = now.Month();
+	measurement_to_store.when_made.dayOfMonth = now.Day();
+	measurement_to_store.when_made.hour = now.Hour();
+	measurement_to_store.when_made.minute = now.Minute();
+	measurement_to_store.when_made.second = now.Second();
+	measurement_to_store.ID = ID;
+
+	//Create Unique Name
+	String Measurement_Name = "/Measurements/";
+	Measurement_Name += measurement_to_store.when_made.year;
+	Measurement_Name += "_";
+	Measurement_Name += measurement_to_store.when_made.month;
+	Measurement_Name += "_";
+	Measurement_Name += measurement_to_store.when_made.dayOfMonth;
+	Measurement_Name += "_";
+	Measurement_Name += measurement_to_store.when_made.hour;
+	Measurement_Name += "_";
+	Measurement_Name += measurement_to_store.when_made.minute;
+	Measurement_Name += "_";
+	Measurement_Name += measurement_to_store.when_made.second;
+
+	Serial.print("Name of Measurement is: ");
+	Serial.println(Measurement_Name);
+	Serial.print("No Of Bytes in Measurement is: ");
+	Serial.print(sizeof(measurement_to_store));
+
+	byte *ptr_to_measurement_to_store_bytes = (byte*)(void*)(&measurement_to_store);
+	File f = SPIFFS.open(Measurement_Name, "w");
+	if (!f) {
+		Serial.println("file open failed");
+	}
+	else
+	{
+		for (int i = 0; i < sizeof(measurement_to_store); i++)
+		{
+			f.write(ptr_to_measurement_to_store_bytes[i]);
+		}
+	}
+	f.close();
+}
+
 //Data Send Processing Subroutines
 void Send_New_Data_to_Server(void)
 {
-	bool New_Data_to_Send = false;
 	//Check if there is data to Send and Set New_Data Accordingly
-	if (New_Data_to_Send)
+	if (Check_if_new_measurements_to_send())
 	{
-		//Send New Data
+		byte data_to_send[120];
+		//create frame
+		data_to_send[0] = '|';
+		data_to_send[1] = 'D';
+		data_to_send[2] = '|';
+		data_to_send[3] = '|';
+		data_to_send[4] = 'P';
+		data_to_send[5] = 'R';
+		data_to_send[6] = '|';
+
+		client.println("There is new Measurement Data for you!");
+		Dir dir = SPIFFS.openDir("/Measurements"); //Open Directory
+		if(dir.next()) //Check if reading is still there
+		{ 
+			//Serial.println(dir.fileName());
+			File f = dir.openFile("r"); //Open File for reading
+			if (!f) {					//Check if File Opened Successfully
+				Serial.println("file open failed");
+			}
+			else { //If it Did then pack bytes to Send
+				Serial.print("File Size: ");
+				Serial.println(f.size());
+				for (int i = 0; i < f.size(); i++)
+				{
+					data_to_send[i + 7] = f.read();
+				}
+				data_to_send[f.size() + 7] = '|';
+				data_to_send[f.size() + 8] = 'E';
+				data_to_send[f.size() + 9] = 'D';
+				data_to_send[f.size() + 10] = '|';
+				Serial.println("Frame of Data to Send: ");
+				String data = "";
+				for (int i = 0; i < f.size() + 10; i++)
+				{
+					Serial.print((char)data_to_send[i]);
+					data += (char)data_to_send[i];
+				}
+				client.println(data);
+			}
+		}
+		else {
+			Serial.println("Measurement is gone!!");
+		}
 	}
 	else
 	{
@@ -626,6 +767,25 @@ void RTC_SETUP(void) {
 	// just clear them to your needed state
 	Rtc.Enable32kHzPin(false);
 	Rtc.SetSquareWavePin(DS3231SquareWavePin_ModeNone);
+}
+
+void File_System_Setup(void)
+{
+	SPIFFS.begin();
+	SPIFFS.info(fs_info);
+	Serial.println("File System Info: ");
+	Serial.print("Total Bytes: ");
+	Serial.println(fs_info.totalBytes);
+	Serial.print("Used Bytes: ");
+	Serial.println(fs_info.usedBytes);
+	Serial.print("BlockS ize: ");
+	Serial.println(fs_info.blockSize);
+	Serial.print("Max Open Files: ");
+	Serial.println(fs_info.maxOpenFiles);
+
+	//Serial.println("Formatting SPIFFS");
+	//SPIFFS.format();
+	//Serial.println("SPIFFS formatted");
 }
 
 void time_test(void) {
