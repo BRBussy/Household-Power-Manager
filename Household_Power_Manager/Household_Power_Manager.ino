@@ -218,10 +218,10 @@ void loop() {
 		//time_test();
 		float measurement = 22.5;
 		int ID = Major_Appliance;
-		//Store_power_measurement(measurement, ID);
-		//Display_Measurements();
+		Store_power_measurement(measurement, ID);
+		Display_Measurements();
 
-		delay(1500);
+		delay(500);
 		break;
 	}//End Normal Mode
 	}//End Switch(Operating_Mode)
@@ -380,8 +380,7 @@ void Connect_as_Client(void)
 	Serial.println("Attempting Connection to Server...");
 	if (client.connect(Host.c_str(), Port))
 	{
-		Serial.println("Connection Successful!");
-		client.println("First Communication!");
+		Serial.println("Connected to Server!");
 	}
 	else
 		Serial.println("Connection to Server Not Possible.");
@@ -581,49 +580,16 @@ void process_received_time(byte *Data_Payload, int &Num_Bytes_in_Payload)
 	Serial.println("Processing a Time...");
 }
 
-void Display_Measurements(void)
+//Data Storage system Subroutines
+void Store_power_measurement(const float &measurement, const int &ID)
 {
-	power_measurement measurement_to_send; //Structure for Measurement
-	byte *ptr_to_measurement_to_send_bytes = (byte*)(void*)(&measurement_to_send);
-	
-	Dir dir = SPIFFS.openDir("/Measurements");
-	Serial.println("Measurements Directory Contains: ");
-	while(dir.next()) {
-		Serial.print("File: ");
-		Serial.println(dir.fileName());
-		
-		File f = dir.openFile("r");
-		if (!f) {  //Check if File Opened Successfully
-			Serial.println("file open failed");
-		}
-		else { //If it Did then Reconstruct Measurement Structure
-			for (int i = 0; i < sizeof(measurement_to_send); i++)
-			{
-				ptr_to_measurement_to_send_bytes[i] = f.read();
-			}
-			Serial.print("With Measurement Value: ");
-			Serial.println(measurement_to_send.measurement);
-			Serial.println("");
-		}
-	}
-}
-
-bool Check_if_new_measurements_to_send(void)
-{
-	Dir dir = SPIFFS.openDir("/Measurements");
-	if (dir.next()) { //Check for any files in directory Power_Readings
-		return true;
-	}
-	return false;
-}
-
-void Store_power_measurement(float &measurement, int &ID)
-{
+	int store_attempt = 0;
+	bool file_open_success = false;
 	power_measurement measurement_to_store; //Structure for Measurement
 	RtcDateTime now = Rtc.GetDateTime();    //Get Time Measurement is Made (stored)
 
 	SPIFFS.info(fs_info); //Check how much memory is left
-	if (fs_info.totalBytes > (fs_info.usedBytes + 100)) {
+	if (fs_info.totalBytes < (fs_info.usedBytes + 100)) {
 		Serial.println("There is No More Memory available!!");
 		return;
 	}
@@ -639,38 +605,87 @@ void Store_power_measurement(float &measurement, int &ID)
 
 	//Create Unique Name
 	String Measurement_Name = "/Measurements/";
-	Measurement_Name += measurement_to_store.when_made.year;
-	Measurement_Name += "_";
-	Measurement_Name += measurement_to_store.when_made.month;
-	Measurement_Name += "_";
-	Measurement_Name += measurement_to_store.when_made.dayOfMonth;
-	Measurement_Name += "_";
+	//Measurement_Name += measurement_to_store.when_made.year;
+	//Measurement_Name += "_";
+	//Measurement_Name += measurement_to_store.when_made.month;
+	//Measurement_Name += "_";
+	//Measurement_Name += measurement_to_store.when_made.dayOfMonth;
+	//Measurement_Name += "_";
 	Measurement_Name += measurement_to_store.when_made.hour;
 	Measurement_Name += "_";
 	Measurement_Name += measurement_to_store.when_made.minute;
 	Measurement_Name += "_";
 	Measurement_Name += measurement_to_store.when_made.second;
 
-	Serial.print("Name of Measurement is: ");
+	Serial.println();
+	Serial.print("Name of file to Store Measurement in is: ");
 	Serial.println(Measurement_Name);
-	Serial.print("No Of Bytes in Measurement is: ");
-	Serial.print(sizeof(measurement_to_store));
+	//Serial.print("No Of Bytes in Measurement is: ");
+	//Serial.print(sizeof(measurement_to_store));
+	//Serial.println();
 
 	byte *ptr_to_measurement_to_store_bytes = (byte*)(void*)(&measurement_to_store);
-	File f = SPIFFS.open(Measurement_Name, "w");
-	if (!f) {
-		Serial.println("file open failed");
-	}
-	else
-	{
-		for (int i = 0; i < sizeof(measurement_to_store); i++)
+	do {
+		File f = SPIFFS.open(Measurement_Name, "w");
+		if (!f) {
+			Serial.println("File Open Failed");
+			store_attempt++;
+		}
+		else
 		{
-			f.write(ptr_to_measurement_to_store_bytes[i]);
+			Serial.println("File Open Successfull!");
+			file_open_success = true;
+			for (int i = 0; i < sizeof(measurement_to_store); i++)
+			{
+				f.write(ptr_to_measurement_to_store_bytes[i]);
+			}
+			f.close();
+		}
+	} while ((store_attempt <= 10) && (!file_open_success));
+}
+bool Check_if_new_measurements_to_send(void)
+{
+	Dir dir = SPIFFS.openDir("/Measurements");
+	if (dir.next()) { //Check for any files in directory Power_Readings
+		return true;
+	}
+	return false;
+}
+void Display_Measurements(void)
+{
+	//power_measurement measurement_to_send; //Structure for Measurement
+	//byte *ptr_to_measurement_to_send_bytes = (byte*)(void*)(&measurement_to_send);
+	int no_of_readings = 0;
+	Dir dir = SPIFFS.openDir("/Measurements");
+	if (dir.next()) //Check for any files in directory Power_Readings
+	{
+		no_of_readings++;
+		while (dir.next()) 
+		{
+			no_of_readings++;
 		}
 	}
-	f.close();
-}
+	Serial.println("Measurements Directory Contains: ");
+	Serial.print(no_of_readings);
+	Serial.println(" Power Readings");
+			
+			/*Serial.print("File: ");
+			Serial.println(dir.fileName());
 
+			File f = dir.openFile("r");
+			if (!f) {  //Check if File Opened Successfully
+			Serial.println("file open failed");
+			}
+			else { //If it Did then Reconstruct Measurement Structure
+			for (int i = 0; i < sizeof(measurement_to_send); i++)
+			{
+			ptr_to_measurement_to_send_bytes[i] = f.read();
+			}
+			Serial.print("With Measurement Value: ");
+			Serial.println(measurement_to_send.measurement);
+			Serial.println("");
+			}*/
+}
 //Data Send Processing Subroutines
 void Send_New_Data_to_Server(void)
 {
@@ -686,19 +701,16 @@ void Send_New_Data_to_Server(void)
 		data_to_send[4] = 'P';
 		data_to_send[5] = 'R';
 		data_to_send[6] = '|';
-
-		client.println("There is new Measurement Data for you!");
 		Dir dir = SPIFFS.openDir("/Measurements"); //Open Directory
-		if(dir.next()) //Check if reading is still there
-		{ 
-			//Serial.println(dir.fileName());
+		if (dir.next()) //Check if reading is still there
+		{
 			File f = dir.openFile("r"); //Open File for reading
 			if (!f) {					//Check if File Opened Successfully
 				Serial.println("file open failed");
 			}
 			else { //If it Did then pack bytes to Send
-				Serial.print("File Size: ");
-				Serial.println(f.size());
+				//Serial.print("File Size: ");
+				//Serial.println(f.size());
 				for (int i = 0; i < f.size(); i++)
 				{
 					data_to_send[i + 7] = f.read();
@@ -709,12 +721,14 @@ void Send_New_Data_to_Server(void)
 				data_to_send[f.size() + 10] = '|';
 				Serial.println("Frame of Data to Send: ");
 				String data = "";
-				for (int i = 0; i < f.size() + 10; i++)
+				for (int i = 0; i < f.size() + 11; i++)
 				{
 					Serial.print((char)data_to_send[i]);
 					data += (char)data_to_send[i];
 				}
+				Serial.println("");
 				client.println(data);
+				SPIFFS.remove(dir.fileName()); //Remove File
 			}
 		}
 		else {
