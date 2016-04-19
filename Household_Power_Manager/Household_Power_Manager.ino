@@ -26,7 +26,7 @@
 //Scheduling Information Structure
 struct scheduling_information { //Declare scheduling_information struct type
 	int ID; //Device ID
-	bool hours_on_off[12][31][24]; //hours_on_off[Months, Days, Hours]
+	bool hours_on_off[7][24][60]; //hours_on_off[Days, Hours, Minutes]
 };
 //Time and Date Structure
 struct time_and_date { //Declare time_and_date struct type
@@ -90,6 +90,7 @@ struct major_appliance_status { //Declare major_appliance_status struct type
 	//Major Appliance Variables
 	
 	//Other Uncategorized Variables
+	int Take_Measurement_counter = 5;
 	int Operating_Mode;
 	bool Statuses[2] = {};
 	WiFiClient client;
@@ -214,14 +215,21 @@ void loop() {
 
 	case Normal_Mode:
 	{
-		Send_Receive_Protocol();
-		//time_test();
 		float measurement = 22.5;
 		int ID = Major_Appliance;
-		Store_power_measurement(measurement, ID);
+		
+		Send_Receive_Protocol();
+		//time_test();
+		if (Take_Measurement_counter <= 5) { 
+			Take_Measurement_counter++; 
+		}
+		else {
+			Store_power_measurement(measurement, ID);
+			Take_Measurement_counter = 0;
+		}
 		Display_Measurements();
 
-		delay(500);
+		//delay(500);
 		break;
 	}//End Normal Mode
 	}//End Switch(Operating_Mode)
@@ -572,7 +580,6 @@ void process_received_schedule(byte *Data_Payload, int &Num_Bytes_in_Payload)
 	scheduling_information firstschedule;
 	rebuild_received_data(Data_Payload, Num_Bytes_in_Payload, firstschedule);
 	Serial.println(firstschedule.ID);
-
 }
 //|TI| Time Processing
 void process_received_time(byte *Data_Payload, int &Num_Bytes_in_Payload)
