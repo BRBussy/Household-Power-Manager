@@ -97,20 +97,16 @@ struct major_appliance_status { //Declare major_appliance_status struct type
 	RtcDS3231 Rtc;
 	FSInfo fs_info;
 
-	int Schedule_Part_Stored = 0;
-	byte* Schedules_Bytes = NULL;
-
 // the setup function runs once when you press reset or power the board
 void setup() {
-	Serial.begin(BAUD);
 	//Hardware Setup, pin modes etc.
+	Serial.begin(BAUD);
 	pinMode(SetupModeButton, INPUT);
 	RTC_SETUP();
 	File_System_Setup();
+	
 	//Software Setup
-	Operating_Mode = Normal_Mode; 
-
-	Schedules_Bytes = (byte*)realloc(Schedules_Bytes, 10084 * sizeof(byte));
+	Operating_Mode = Normal_Mode;
 }//End setup();
 
 // the loop function runs over and over again until power down or reset
@@ -234,7 +230,7 @@ void loop() {
 			Take_Measurement_counter = 0;
 		}
 		if (Take_Measurement_counter == 0) {
-			//Display_Measurements();
+			Display_Measurements();
 		}
 		
 
@@ -595,86 +591,11 @@ return No_Command;
 void process_received_schedule(byte *Data_Payload, int &Num_Bytes_in_Payload)
 {
 	Serial.println("Processing a Schedule...");
-	String part_number = "";
-	int i;
-	int j;
-	bool schedule_receive_complete = false;
-	
-	//Schedules_Bytes[10084]
-
-	for (int i = 0; i <= 3; i++) {
-		part_number += (char)Data_Payload[i];
+	Serial.println("Raw Schedule to Process is:");
+	for (int i = 0; i < Num_Bytes_in_Payload; i++) {
+		Serial.print((char)Data_Payload[i]);
 	}
-	
-	if ((Schedule_Part_Stored == 0) && (part_number == "|P0|"))
-	{
-		Serial.println("Part 0 in sync...");
-		Schedule_Part_Stored++;
-		j = 0;
-	}
-	else if ((Schedule_Part_Stored == 1) && (part_number == "|P1|"))
-	{
-		Serial.println("Part 1 in sync...");
-		Schedule_Part_Stored++;
-		j = 2521;
-	}
-	else if ((Schedule_Part_Stored == 2) && (part_number == "|P2|"))
-	{
-		Serial.println("Part 2 in sync...");
-		Schedule_Part_Stored++;
-		j = 5042;
-	}
-	else if ((Schedule_Part_Stored == 3) && (part_number == "|P3|"))
-	{
-		Serial.println("Part 3 in sync...");
-		schedule_receive_complete = true;
-		Schedule_Part_Stored = 0;
-		j = 7563;
-	}
-	else {
-		Serial.println("Sync Broken...");
-		Schedule_Part_Stored = 0;
-	}
-
-	for (i = 4; i < Num_Bytes_in_Payload; i++)
-	{
-		Schedules_Bytes[j] = Data_Payload[i];
-		j++;
-	}
-	Serial.print("i = ");
-	Serial.println(i);
-	Serial.print("j = ");
-	Serial.println(j);
-
-	if (schedule_receive_complete) 
-	{
-		scheduling_information device_schedule;
-		byte *ptr_to_rebuilt_variable_bytes = (byte*)(void*)(&device_schedule);
-		
-		for (int i = 0; i < 10084; i++)
-		{
-			ptr_to_rebuilt_variable_bytes[i] = Schedules_Bytes[i];
-		}
-		
-		//rebuild_received_data(Schedules_Bytes, 10084, device_schedule);
-		Serial.println(device_schedule.ID);
-		
-		for (int day = 0; day <= 6; day++) 
-		{
-			Serial.print("Day: ");
-			Serial.println(day);
-			for (int hour = 0; hour <= 23; hour++) 
-			{
-				Serial.print("Hour: ");
-				Serial.println(hour);
-				for (int minute = 0; minute <= 59; minute++) 
-				{
-					Serial.print(device_schedule.hours_on_off[day][hour][minute]);
-				}
-				Serial.println("");
-			}
-		}
-	}
+	Serial.println("");
 }
 //|TI| Time Processing
 void process_received_time(byte *Data_Payload, int &Num_Bytes_in_Payload)
