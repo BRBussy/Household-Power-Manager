@@ -288,6 +288,7 @@ void Send_Receive_Protocol(void)
 					}
 					default: { //Received What from Server? -->No_Command
 						Serial.println("No Command Received From Server");
+						Wait_for_Data = false;
 						break;
 					}//END default case
 					}//END Switch (Command_Received)
@@ -410,6 +411,8 @@ byte* receive_Data_From_Server(int &no_of_bytes_received)
 		ptr_Bytes_of_Data_In[size - 1] = data_byte;		//assign to byte array
 		no_of_bytes_received = size;						//New Data Has been Retreived
 	}
+	Serial.print("No of Bytes Received: ");
+	Serial.println(no_of_bytes_received);
 	return ptr_Bytes_of_Data_In;
 } //END receive_Data_From_Server
 
@@ -577,9 +580,16 @@ return No_Command;
 void process_received_schedule(byte *Data_Payload, int &Num_Bytes_in_Payload)
 {
 	Serial.println("Processing a Schedule...");
-	scheduling_information firstschedule;
-	rebuild_received_data(Data_Payload, Num_Bytes_in_Payload, firstschedule);
-	Serial.println(firstschedule.ID);
+	
+	Serial.print("Received: ");
+	for (int i = 0; i <= 3; i++) {
+		Serial.print((char)Data_Payload[i]);
+	}
+	Serial.println("");
+
+	//scheduling_information firstschedule;
+	//rebuild_received_data(Data_Payload, Num_Bytes_in_Payload, firstschedule);
+	//Serial.println(firstschedule.ID);
 }
 //|TI| Time Processing
 void process_received_time(byte *Data_Payload, int &Num_Bytes_in_Payload)
