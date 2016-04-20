@@ -88,6 +88,7 @@ struct major_appliance_status { //Declare major_appliance_status struct type
 	int Port = 6950;
 
 	//Major Appliance Variables
+	scheduling_information device_schedule;
 	
 	//Other Uncategorized Variables
 	int Take_Measurement_counter = 5;
@@ -104,6 +105,8 @@ void setup() {
 	pinMode(SetupModeButton, INPUT);
 	RTC_SETUP();
 	File_System_Setup();
+
+	//Retrieve
 	
 	//Software Setup
 	Operating_Mode = Normal_Mode;
@@ -590,8 +593,8 @@ return No_Command;
 
 void process_received_schedule(byte *Data_Payload, int &Num_Bytes_in_Payload)
 {
-	//char a = '6';
-	//int b = a - 48;
+	
+	
 	int day = 0, hour_start = 0, minute_start = 0, hour_end = 0, minute_end = 0;
 
 	Serial.println("Processing a Schedule...");
