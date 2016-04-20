@@ -590,10 +590,54 @@ return No_Command;
 
 void process_received_schedule(byte *Data_Payload, int &Num_Bytes_in_Payload)
 {
+	//char a = '6';
+	//int b = a - 48;
+	int day = 0, hour_start = 0, minute_start = 0, hour_end = 0, minute_end = 0;
+
 	Serial.println("Processing a Schedule...");
 	Serial.println("Raw Schedule to Process is:");
-	for (int i = 0; i < Num_Bytes_in_Payload; i++) {
-		Serial.print((char)Data_Payload[i]);
+	for (int i = 0; i < Num_Bytes_in_Payload; i+=10) {
+		for (int j = i; j < i + 10; j++)
+		{
+			if (j == i + 1) 
+				day = (char)Data_Payload[j] - 48;
+			else if (j == i + 2) {
+				String temp_hour_start = "";
+				temp_hour_start += (char)Data_Payload[j];
+				temp_hour_start += (char)Data_Payload[j+1];
+				hour_start = temp_hour_start.toInt();
+			}
+			else if (j == i + 4) {
+				String temp_minute_start = "";
+				temp_minute_start += (char)Data_Payload[j];
+				temp_minute_start += (char)Data_Payload[j + 1];
+				minute_start = temp_minute_start.toInt();
+			}
+			else if (j == i + 6) {
+				String temp_hour_end = "";
+				temp_hour_end += (char)Data_Payload[j];
+				temp_hour_end += (char)Data_Payload[j + 1];
+				hour_end = temp_hour_end.toInt();
+			}
+			else if (j == i + 8) {
+				String temp_minute_end = "";
+				temp_minute_end += (char)Data_Payload[j];
+				temp_minute_end += (char)Data_Payload[j + 1];
+				minute_end = temp_minute_end.toInt();
+			}
+		}
+		Serial.print("Day: ");
+		Serial.println(day);
+		Serial.print("Hour Start: ");
+		Serial.println(hour_start);
+		Serial.print("Hour End: ");
+		Serial.println(hour_end);
+		Serial.print("Minute Start: ");
+		Serial.println(minute_start);
+		Serial.print("Minute End: ");
+		Serial.println(minute_end);
+
+		Serial.println("");
 	}
 	Serial.println("");
 }
