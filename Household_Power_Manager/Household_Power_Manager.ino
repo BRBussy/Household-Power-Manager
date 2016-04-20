@@ -4,6 +4,7 @@
  Author:	Bernard
 */
 #include <Arduino.h> 
+#include <SPI.h>
 #include <Wire.h>
 #include <RtcUtility.h>
 #include <RtcDS3231.h>
@@ -116,6 +117,9 @@ void setup() {
 	
 	//Software Setup
 	Operating_Mode = Setup_Mode;
+
+	//Temporary Setups
+	randomSeed(11);
 }//End setup();
 
 // the loop function runs over and over again until power down or reset
@@ -246,7 +250,7 @@ void loop() {
 
 	case Normal_Mode:
 	{
-		float measurement = 22.5;
+		float measurement = random(700);
 		int ID = Major_Appliance;
 		
 		Send_Receive_Protocol();
@@ -255,7 +259,7 @@ void loop() {
 			Take_Measurement_counter++; 
 		}
 		else {
-			//Store_power_measurement(measurement, ID);
+			Store_power_measurement(measurement, ID);
 			Take_Measurement_counter = 0;
 		}
 		if (Take_Measurement_counter == 0) {
