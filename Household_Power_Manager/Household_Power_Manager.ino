@@ -107,6 +107,7 @@ void setup() {
 	File_System_Setup();
 
 	//Retrieve old device schedule from memory;
+	Retrieve_Schedule_information();
 	//Retrieve network details from memory;
 	
 	//Software Setup
@@ -550,7 +551,7 @@ int Data_Identification_Protocol(byte *Bytes_of_Data_In, int &no_of_Bytes_Receiv
 	}//END if (Data_ID == "|CM|")
 	else if (Data_ID == "|SI|") //If Scheduling Information was Received
 	{
-		process_received_schedule(Data_Payload, Num_Bytes_in_Payload);
+		process_received_schedule(Data_Payload, Num_Bytes_in_Payload, false);
 	}//END else if (Data_ID == "|SI|")
 	else if (Data_ID == "|TI|") //If Time Information was Received
 	{
@@ -592,8 +593,30 @@ return No_Command;
 }
 //|SI| Scheduling Processing
 
-void process_received_schedule(byte *Data_Payload, int &Num_Bytes_in_Payload)
+void process_received_schedule(byte *Data_Payload, int &Num_Bytes_in_Payload, bool startup)
 {
+	if (!startup) {
+		Serial.println("New Schdule Data Received, Processing Schedule Now...");
+		//Save Received Scheduling Info to Memory
+		File f = SPIFFS.open("/device_scheduling_data", "w");
+		if (!f) {
+			Serial.println("File Open Failed");
+		}
+		else
+		{
+			Serial.println("File Open Successfull! Saving to Memory...");
+			for (int i = 0; i < Num_Bytes_in_Payload; i++)
+			{
+				f.write(Data_Payload[i]);
+			}
+			f.close();
+		}
+	}
+	else
+	{
+		Serial.println("Loading Schedule Data retrieved from Memory");
+	}
+
 	Serial.println("New Schdule Data Received, Processing Schedule Now...");
 	int Day = 0, Hour_Start = 0, Minute_Start = 0, Hour_End = 0, Minute_End = 0;
 	
@@ -686,21 +709,26 @@ void process_received_schedule(byte *Data_Payload, int &Num_Bytes_in_Payload)
 		}
 	}
 	//Print out Entire new Device_Schedule
-	for (int Day_index = 0; Day_index < 7; Day_index++)
+	if (startup)
 	{
-		Serial.print("Day ");Serial.print(Day_index); Serial.println(":");
-		for (int hour_index = 0; hour_index < 24; hour_index++)
+		Serial.println("Schedule Data Retrieved: ");
+		for (int Day_index = 0; Day_index < 7; Day_index++)
 		{
-			Serial.print("Hour ");Serial.print(hour_index); Serial.println(":");
-			for (int minute_index = 0; minute_index < 60; minute_index++)
+			Serial.print("Day ");Serial.print(Day_index); Serial.println(":");
+			for (int hour_index = 0; hour_index < 24; hour_index++)
 			{
-				Serial.print(device_schedule.hours_on_off[Day_index][hour_index][minute_index]);
+				Serial.print("Hour ");Serial.print(hour_index); Serial.println(":");
+				for (int minute_index = 0; minute_index < 60; minute_index++)
+				{
+					Serial.print(device_schedule.hours_on_off[Day_index][hour_index][minute_index]);
+				}
+				Serial.println("");
 			}
 			Serial.println("");
+			Serial.println("");
 		}
-		Serial.println("");
-		Serial.println("");
 	}
+	
 }
 //|TI| Time Processing
 void process_received_time(byte *Data_Payload, int &Num_Bytes_in_Payload)
@@ -958,4 +986,37 @@ void printDateTime(const RtcDateTime& dt)
 		dt.Minute(),
 		dt.Second());
 	Serial.print(datestring);
+}
+
+void Retrieve_Schedule_information(void)
+{
+	byte *Data_Payload = NULL;
+	int Num_Bytes_in_Payload = 0;
+
+	if (SPIFFS.exists("/device_scheduling_data"))
+	{
+		Serial.println("Retrieving Stored Scheduling Data");
+		File f = SPIFFS.open("/device_scheduling_data", "r");
+		if (!f) {
+			Serial.println("File open failed!");
+		}
+		else {
+			Serial.println("File open successful!");
+			Num_Bytes_in_Payload = f.size();
+			Serial.print("Size of Scheduling Data: "); Serial.println(Num_Bytes_in_Payload);
+
+			Data_Payload = (byte*)realloc(Data_Payload, Num_Bytes_in_Payload*sizeof(byte));
+			
+			for (int i = 0; i < Num_Bytes_in_Payload; i++)
+			{
+				Data_Payload[i] = f.read();
+			}
+			process_received_schedule(Data_Payload, Num_Bytes_in_Payload, true);
+			free(Data_Payload);
+		}
+	}
+	else 
+	{
+		Serial.println("No Stored Scheduling Data Found");
+	}
 }
