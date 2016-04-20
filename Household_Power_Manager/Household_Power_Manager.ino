@@ -81,8 +81,8 @@ struct major_appliance_status { //Declare major_appliance_status struct type
 //Global Variable Declarations
 
 	//Network Details --SAVE to EEPROM
-	String NetworkName = "";
-	String NetworkPassword = "";
+	String NetworkName = "BernysWAP";
+	String NetworkPassword = "bionicle123#";
 	
 	//Client Server Details
 	String Host = "10.0.0.9";
@@ -113,7 +113,6 @@ void setup() {
 	//Retrieve old device schedule from memory;
 	Retrieve_Schedule_information();
 	//Retrieve network details from memory;
-	Retrieve_network_details();
 	
 	//Software Setup
 	Operating_Mode = Setup_Mode;
@@ -374,8 +373,8 @@ void Connect_to_WiFi(void)
 	bool network_available = false;
 	
 	WiFi.disconnect();
-	Serial.print("Attempting Connection to: ");
-	Serial.println(NetworkName);
+	Serial.println("Attempting Connection to: ");
+	Serial.print(NetworkName);
 
 	//Check If Desired Network is available, Return if unavailable
 	int n = WiFi.scanNetworks(); 
@@ -615,7 +614,7 @@ int Data_Identification_Protocol(byte *Bytes_of_Data_In, int &no_of_Bytes_Receiv
 
 	else if (Data_ID == "|ND|") //Network Details Were Received
 	{
-		process_received_network_details(Data_Payload, Num_Bytes_in_Payload, false);
+		process_received_network_details(Data_Payload, Num_Bytes_in_Payload);
 	}//END else if (Data_ID == "|ND|")
 	
 	return No_Command;
@@ -909,31 +908,8 @@ void process_received_time(byte *Data_Payload, int &Num_Bytes_in_Payload)
 	Serial.println("Processing a Time...");
 }
 //|ND| Network Details Processing
-void process_received_network_details(byte *Data_Payload, int &Num_Bytes_in_Payload, bool startup)
+void process_received_network_details(byte *Data_Payload, int &Num_Bytes_in_Payload)
 {
-	if (!startup) 
-	{
-		Serial.println("New Network Details Data Received, Processing them Now...");
-		//Save Received Scheduling Info to Memory
-		File f = SPIFFS.open("/Network_Details", "w");
-		if (!f) {
-			Serial.println("File Open Failed");
-		}
-		else
-		{
-			Serial.println("File Open Successfull! Saving to Memory...");
-			for (int i = 0; i < Num_Bytes_in_Payload; i++)
-			{
-				f.write(Data_Payload[i]);
-			}
-			f.close();
-		}
-	}
-	else
-	{
-		Serial.println("Loading Schedule Data retrieved from Memory");
-	}
-
 	Serial.println("Processing Network Details...");
 	String SSID = "";
 	String Password = "";
@@ -1243,38 +1219,5 @@ void Retrieve_Schedule_information(void)
 	else 
 	{
 		Serial.println("No Stored Scheduling Data Found");
-	}
-}
-void Retrieve_network_details(void)
-{
-	byte *Data_Payload = NULL;
-	int Num_Bytes_in_Payload = 0;
-
-	if (SPIFFS.exists("/Network_Details"))
-	{
-		Serial.println("Retrieving Stored Network Details");
-
-		File f = SPIFFS.open("/Network_Details", "r");
-		if (!f) {
-			Serial.println("File open failed!");
-		}
-		else {
-			Serial.println("File open successful!");
-			Num_Bytes_in_Payload = f.size();
-			Serial.print("Size of Network Details Data: "); Serial.println(Num_Bytes_in_Payload);
-
-			Data_Payload = (byte*)realloc(Data_Payload, Num_Bytes_in_Payload*sizeof(byte));
-
-			for (int i = 0; i < Num_Bytes_in_Payload; i++)
-			{
-				Data_Payload[i] = f.read();
-			}
-			process_received_network_details(Data_Payload, Num_Bytes_in_Payload, true);
-			free(Data_Payload);
-		}
-	}
-	else
-	{
-		Serial.println("No Stored Network Details Found");
 	}
 }
