@@ -106,7 +106,8 @@ void setup() {
 	RTC_SETUP();
 	File_System_Setup();
 
-	//Retrieve
+	//Retrieve old device schedule from memory;
+	//Retrieve network details from memory;
 	
 	//Software Setup
 	Operating_Mode = Normal_Mode;
@@ -593,56 +594,113 @@ return No_Command;
 
 void process_received_schedule(byte *Data_Payload, int &Num_Bytes_in_Payload)
 {
+	Serial.println("New Schdule Data Received, Processing Schedule Now...");
+	int Day = 0, Hour_Start = 0, Minute_Start = 0, Hour_End = 0, Minute_End = 0;
 	
-	
-	int day = 0, hour_start = 0, minute_start = 0, hour_end = 0, minute_end = 0;
+	//First Clear out Old Schedule
+	for (int Day_index = 0; Day_index < 7; Day_index++)
+		for (int hour_index = 0; hour_index < 24; hour_index++)
+			for (int minute_index = 0; minute_index < 60; minute_index++)
+				device_schedule.hours_on_off[Day_index][hour_index][minute_index] = false;
 
-	Serial.println("Processing a Schedule...");
-	Serial.println("Raw Schedule to Process is:");
-	for (int i = 0; i < Num_Bytes_in_Payload; i+=10) {
+	//Decode Received data device_schedule
+	for (int i = 0; i < Num_Bytes_in_Payload; i+=10) 
+	{//For each schedule in frame received decode and load into device_schedule
 		for (int j = i; j < i + 10; j++)
 		{
 			if (j == i + 1) 
-				day = (char)Data_Payload[j] - 48;
+				Day = (char)Data_Payload[j] - 48;
 			else if (j == i + 2) {
-				String temp_hour_start = "";
-				temp_hour_start += (char)Data_Payload[j];
-				temp_hour_start += (char)Data_Payload[j+1];
-				hour_start = temp_hour_start.toInt();
+				String temp_Hour_Start = "";
+				temp_Hour_Start += (char)Data_Payload[j];
+				temp_Hour_Start += (char)Data_Payload[j+1];
+				Hour_Start = temp_Hour_Start.toInt();
 			}
 			else if (j == i + 4) {
-				String temp_minute_start = "";
-				temp_minute_start += (char)Data_Payload[j];
-				temp_minute_start += (char)Data_Payload[j + 1];
-				minute_start = temp_minute_start.toInt();
+				String temp_Minute_Start = "";
+				temp_Minute_Start += (char)Data_Payload[j];
+				temp_Minute_Start += (char)Data_Payload[j + 1];
+				Minute_Start = temp_Minute_Start.toInt();
 			}
 			else if (j == i + 6) {
-				String temp_hour_end = "";
-				temp_hour_end += (char)Data_Payload[j];
-				temp_hour_end += (char)Data_Payload[j + 1];
-				hour_end = temp_hour_end.toInt();
+				String temp_Hour_End = "";
+				temp_Hour_End += (char)Data_Payload[j];
+				temp_Hour_End += (char)Data_Payload[j + 1];
+				Hour_End = temp_Hour_End.toInt();
 			}
 			else if (j == i + 8) {
-				String temp_minute_end = "";
-				temp_minute_end += (char)Data_Payload[j];
-				temp_minute_end += (char)Data_Payload[j + 1];
-				minute_end = temp_minute_end.toInt();
+				String temp_Minute_End = "";
+				temp_Minute_End += (char)Data_Payload[j];
+				temp_Minute_End += (char)Data_Payload[j + 1];
+				Minute_End = temp_Minute_End.toInt();
 			}
 		}
-		Serial.print("Day: ");
-		Serial.println(day);
-		Serial.print("Hour Start: ");
-		Serial.println(hour_start);
-		Serial.print("Hour End: ");
-		Serial.println(hour_end);
-		Serial.print("Minute Start: ");
-		Serial.println(minute_start);
-		Serial.print("Minute End: ");
-		Serial.println(minute_end);
 
+		//Print out this decoded schedules Details
+		/*Serial.print("Day: ");Serial.println(Day);
+		Serial.print("Hour Start: ");Serial.println(Hour_Start);
+		Serial.print("Hour End: ");Serial.println(Hour_End);
+		Serial.print("Minute Start: ");Serial.println(Minute_Start);
+		Serial.print("Minute End: ");Serial.println(Minute_End);*/
+
+		//Load this schedule into device_schedule
+		if (((Day <= 6) && (Day >= 0))
+			&& ((Hour_Start <= 23) && (Hour_Start >= 0))
+			&& ((Hour_End <= 23) && (Hour_End >= 0))
+			&& ((Minute_Start <= 59) && (Minute_Start >= 0))
+			&& ((Minute_End <= 59) && (Minute_End >= 0))
+			&& (Hour_Start <= Hour_End)
+			&& ((((Hour_Start == Hour_End) && (Minute_Start <= Minute_End))) || (Hour_Start != Hour_End)))
+		{
+			Serial.println("Good Schedule Data Received");
+			//Make True according to Day Schedule
+			for (int hour = Hour_Start; hour <= Hour_End; hour++)
+			{
+				if (Hour_Start != Hour_End) {
+					if (hour == Hour_Start) {
+						for (int minute = Minute_Start; minute <= 59; minute++) {
+							device_schedule.hours_on_off[Day][hour][minute] = true;
+						}
+					}
+					else if (hour == Hour_End) {
+						for (int minute = 0; minute <= Minute_End; minute++)
+						{
+							device_schedule.hours_on_off[Day][hour][minute] = true;
+						}
+					}
+					else { //Hour_Start < hour < Hour_End
+						for (int minute = 0; minute <= 59; minute++) {
+							device_schedule.hours_on_off[Day][hour][minute] = true;
+						}
+					}
+				}
+				else { //Hour_Start == Hour_End
+					for (int minute = Minute_Start; minute <= Minute_End; minute++) {
+						device_schedule.hours_on_off[Day][hour][minute] = true;
+					}
+				}
+			}
+		}
+		else {
+			Serial.println("Bad Schedule Data Received");
+		}
+	}
+	//Print out Entire new Device_Schedule
+	for (int Day_index = 0; Day_index < 7; Day_index++)
+	{
+		Serial.print("Day ");Serial.print(Day_index); Serial.println(":");
+		for (int hour_index = 0; hour_index < 24; hour_index++)
+		{
+			Serial.print("Hour ");Serial.print(hour_index); Serial.println(":");
+			for (int minute_index = 0; minute_index < 60; minute_index++)
+			{
+				Serial.print(device_schedule.hours_on_off[Day_index][hour_index][minute_index]);
+			}
+			Serial.println("");
+		}
+		Serial.println("");
 		Serial.println("");
 	}
-	Serial.println("");
 }
 //|TI| Time Processing
 void process_received_time(byte *Data_Payload, int &Num_Bytes_in_Payload)
