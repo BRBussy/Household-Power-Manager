@@ -112,7 +112,6 @@ void setup() {
 	//Retrieve old device schedule from memory;
 	Retrieve_Schedule_information();
 	//Retrieve network details from memory;
-	Retrieve_Schedule_information();
 	
 	//Software Setup
 	Operating_Mode = Setup_Mode;
