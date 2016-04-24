@@ -80,8 +80,8 @@ struct major_appliance_status { //Declare major_appliance_status struct type
 //Global Variable Declarations
 
 	//Network Details --SAVE to EEPROM
-	String NetworkName = "";
-	String NetworkPassword = "";
+	String NetworkName = "BernysWAP";
+	String NetworkPassword = "bionicle123#";
 	
 	//Client Server Details
 	String Host = "10.0.0.9";
