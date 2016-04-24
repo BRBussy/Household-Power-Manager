@@ -1,7 +1,7 @@
 /*
- Name:		Household_Power_Manager.ino
- Created:	3/23/2016 3:01:35 PM
- Author:	Bernard
+Name:		Household_Power_Manager.ino
+Created:	3/23/2016 3:01:35 PM
+Author:	Bernard
 */
 #include <Arduino.h> 
 #include <Wire.h>
@@ -50,56 +50,56 @@ struct major_appliance_status { //Declare major_appliance_status struct type
 };
 
 //Definitions
-	#define BAUD 115200
-	//Device IDs
-	#define Total_Household 0
-	#define Major_Appliance 1
-	//Modes
-	#define Setup_Mode 0
-	#define Normal_Mode 1
-	//Pin Definitions
-	#define SetupModeButton 0
-	#define SDA_pin 2
-	#define SCL_pin 14
-	//Statuses
-	#define WifiConnected 0
-	#define ConnectedtoServer 1
-	//WiFi Data Recieve Flags
-	#define New_Data_for_Client 0
-	#define Send_Data_to_Server 1
-	#define No_Command_in_data_from_Server 2
-	#define No_Data_Received 3
-	#define Wait_Until_Recv true
-	//Commands_Received
-	#define No_Command 0 
-	#define Send_Data_To_Server 1 
-	#define Receive_Data_From_Server 2
-	//RTC Definitions
-	#define countof(a) (sizeof(a) / sizeof(a[0]))
+#define BAUD 115200
+//Device IDs
+#define Total_Household 0
+#define Major_Appliance 1
+//Modes
+#define Setup_Mode 0
+#define Normal_Mode 1
+//Pin Definitions
+#define SetupModeButton 0
+#define SDA_pin 2
+#define SCL_pin 14
+//Statuses
+#define WifiConnected 0
+#define ConnectedtoServer 1
+//WiFi Data Recieve Flags
+#define New_Data_for_Client 0
+#define Send_Data_to_Server 1
+#define No_Command_in_data_from_Server 2
+#define No_Data_Received 3
+#define Wait_Until_Recv true
+//Commands_Received
+#define No_Command 0 
+#define Send_Data_To_Server 1 
+#define Receive_Data_From_Server 2
+//RTC Definitions
+#define countof(a) (sizeof(a) / sizeof(a[0]))
 
 //Global Variable Declarations
 
-	//Network Details --SAVE to EEPROM
-	String NetworkName = "BernysWAP";
-	String NetworkPassword = "bionicle123#";
-	
-	//Client Server Details
-	String Host = "10.0.0.9";
-	int Port = 6950;
+//Network Details --SAVE to EEPROM
+String NetworkName = "";
+String NetworkPassword = "";
 
-	//Major Appliance Variables
-	scheduling_information device_schedule;
+//Client Server Details
+String Host = "10.0.0.9";
+int Port = 6950;
 
-	//System Variables
-	WiFiClient client;
-	RtcDS3231 Rtc;
-	FSInfo fs_info;
+//Major Appliance Variables
+scheduling_information device_schedule;
 
-	//Other Uncategorized Variables
-	int Take_Measurement_counter = 5;
-	int Operating_Mode;
-	bool Statuses[2] = {};
-	bool Setup_mode_print_waiting_message = true;
+//System Variables
+WiFiClient client;
+RtcDS3231 Rtc;
+FSInfo fs_info;
+
+//Other Uncategorized Variables
+int Take_Measurement_counter = 5;
+int Operating_Mode;
+bool Statuses[2] = {};
+bool Setup_mode_print_waiting_message = true;
 
 // the setup function runs once when you press reset or power the board
 void setup() {
@@ -112,12 +112,13 @@ void setup() {
 	//Retrieve old device schedule from memory;
 	Retrieve_Schedule_information();
 	//Retrieve network details from memory;
-	
+	Retrieve_network_details();
+
 	//Software Setup
 	Operating_Mode = Setup_Mode;
 }//End setup();
 
-// the loop function runs over and over again until power down or reset
+ // the loop function runs over and over again until power down or reset
 void loop() {
 	//Serial.begin(BAUD);
 	delay(10);
@@ -160,107 +161,107 @@ void loop() {
 
 		/*while (Operating_Mode == Setup_Mode)
 		{
-			//Read Input From Serial
-			while (Serial.available() > 0)
-			{
-				inputString += (char)Serial.read();
-			}
-			if (inputString == "Scan") //Display Available WiFi Networks to User
-			{
-				int n = WiFi.scanNetworks(); //No of Networks found
-				if (n == 0)
-					Serial.println("No Networks Found");
-				else
-				{
-					Serial.print(n);
-					Serial.println("Networks Found:");
-					for (int i = 0; i < n; ++i)
-					{
-						// Print SSID and RSSI for each network found
-						Serial.print(i + 1);
-						Serial.print(": ");
-						Serial.print(WiFi.SSID(i));
-						Serial.print(" (");
-						Serial.print(WiFi.RSSI(i));
-						Serial.print(")");
-						Serial.println((WiFi.encryptionType(i) == ENC_TYPE_NONE) ? " " : "*");
-						delay(10);
-					}
-				}
-			} //End case "Scan"
-			else if (inputString == "Connect") //Connect to WiFi Network
-			{
-				Connect_to_WiFi();
-			} //End case "Connect"
-			else if (inputString == "Status") //Display Status of Connection
-			{
-				Serial.print("Network Name: ");
-				Serial.println(NetworkName);
-				Serial.print("Network Password: ");
-				Serial.println(NetworkPassword);
-			} //End case Status
-			else if (inputString.startsWith("NetDet:") && inputString.endsWith("|"))
-			{
-				String SSID = "";
-				String Password = "";
-				Serial.println("Network Details Received:");
-				int charnum = 7;
-				//Extract NetworkName
-				while (inputString.charAt(charnum) != '|')
-				{
-					SSID += inputString.charAt(charnum);
-					charnum++;
-				}
-				charnum++;
-				//Extract NetworkPassword
-				while (inputString.charAt(charnum) != '|')
-				{
-					Password += inputString.charAt(charnum);
-					charnum++;
-				}
-				NetworkName = SSID;
-				NetworkPassword = Password;
-				Serial.print("Network Name: ");
-				Serial.println(NetworkName);
-				Serial.print("Network Password: ");
-				Serial.println(NetworkPassword);
-			}
-			else if (inputString == "Done")
-			{
-				Serial.println("Starting Normal Mode...");
-				Operating_Mode = Normal_Mode;
-			}
-			else
-			{
-				Serial.print(".");
-			}
+		//Read Input From Serial
+		while (Serial.available() > 0)
+		{
+		inputString += (char)Serial.read();
+		}
+		if (inputString == "Scan") //Display Available WiFi Networks to User
+		{
+		int n = WiFi.scanNetworks(); //No of Networks found
+		if (n == 0)
+		Serial.println("No Networks Found");
+		else
+		{
+		Serial.print(n);
+		Serial.println("Networks Found:");
+		for (int i = 0; i < n; ++i)
+		{
+		// Print SSID and RSSI for each network found
+		Serial.print(i + 1);
+		Serial.print(": ");
+		Serial.print(WiFi.SSID(i));
+		Serial.print(" (");
+		Serial.print(WiFi.RSSI(i));
+		Serial.print(")");
+		Serial.println((WiFi.encryptionType(i) == ENC_TYPE_NONE) ? " " : "*");
+		delay(10);
+		}
+		}
+		} //End case "Scan"
+		else if (inputString == "Connect") //Connect to WiFi Network
+		{
+		Connect_to_WiFi();
+		} //End case "Connect"
+		else if (inputString == "Status") //Display Status of Connection
+		{
+		Serial.print("Network Name: ");
+		Serial.println(NetworkName);
+		Serial.print("Network Password: ");
+		Serial.println(NetworkPassword);
+		} //End case Status
+		else if (inputString.startsWith("NetDet:") && inputString.endsWith("|"))
+		{
+		String SSID = "";
+		String Password = "";
+		Serial.println("Network Details Received:");
+		int charnum = 7;
+		//Extract NetworkName
+		while (inputString.charAt(charnum) != '|')
+		{
+		SSID += inputString.charAt(charnum);
+		charnum++;
+		}
+		charnum++;
+		//Extract NetworkPassword
+		while (inputString.charAt(charnum) != '|')
+		{
+		Password += inputString.charAt(charnum);
+		charnum++;
+		}
+		NetworkName = SSID;
+		NetworkPassword = Password;
+		Serial.print("Network Name: ");
+		Serial.println(NetworkName);
+		Serial.print("Network Password: ");
+		Serial.println(NetworkPassword);
+		}
+		else if (inputString == "Done")
+		{
+		Serial.println("Starting Normal Mode...");
+		Operating_Mode = Normal_Mode;
+		}
+		else
+		{
+		Serial.print(".");
+		}
 
 		inputString = "";
 		delay(1000);
 		}*/
-		
+
 		free(Bytes_of_Data_In);
 		break;
 	}//End Setup Mode
 
 	case Normal_Mode:
 	{
-		float measurement = 22.3;
+		float measurement = 22.5;
 		int ID = Major_Appliance;
-		
+
 		Send_Receive_Protocol();
-		time_test();
-		if (Take_Measurement_counter <= 5) { 
-			Take_Measurement_counter++; 
+		//time_test();
+		if (Take_Measurement_counter <= 5) {
+			Take_Measurement_counter++;
 		}
 		else {
-			Store_power_measurement(measurement, ID);
+			//Store_power_measurement(measurement, ID);
 			Take_Measurement_counter = 0;
 		}
 		if (Take_Measurement_counter == 0) {
 			Display_Measurements();
 		}
-		
+
 
 		//delay(500);
 		break;
@@ -269,9 +270,9 @@ void loop() {
 }//End loop()
 
 
-//Subroutines
+ //Subroutines
 void Send_Receive_Protocol(void)
-{	
+{
 	//Send_Receive_Protocol Variables
 	bool Wait_for_Data = false;
 	bool Data_Received = false;
@@ -279,10 +280,10 @@ void Send_Receive_Protocol(void)
 
 	int no_of_Bytes_Received = 0;
 	int Timeout_Counter = 0;
-	
+
 	byte *Bytes_of_Data_In = NULL; //Will point to array of bytes in
 	String temp = "nothing";
-	
+
 	do {
 		//WiFi Connected?
 		if (WiFi.status() == WL_CONNECTED)
@@ -299,11 +300,11 @@ void Send_Receive_Protocol(void)
 					Data_Received = true;
 				}
 				//Data From Server Received?
-				if (Data_Received) 
+				if (Data_Received)
 				{//Data From Server Received? --> YES
-					//Pass to Data_Identification_Protocol
+				 //Pass to Data_Identification_Protocol
 					int Command_Received = Data_Identification_Protocol(Bytes_of_Data_In, no_of_Bytes_Received);
-					
+
 					//Received What from Server?
 					switch (Command_Received) {
 					case Send_Data_To_Server: { //Received What from Server? -->Send
@@ -328,7 +329,7 @@ void Send_Receive_Protocol(void)
 				}
 				else
 				{//Data From Server Received? --> NO
-					//Do Nothing, Go to while where continuity Check Carried out
+				 //Do Nothing, Go to while where continuity Check Carried out
 				}
 			}
 			else
@@ -345,7 +346,7 @@ void Send_Receive_Protocol(void)
 			return; //Continue
 		}
 
-		if ((Wait_for_Data)&&((Timeout_Counter++) == 10))
+		if ((Wait_for_Data) && ((Timeout_Counter++) == 10))
 		{
 			Serial.println("Timeout Expired");
 			Timeout_Expired = true;
@@ -357,9 +358,9 @@ void Send_Receive_Protocol(void)
 				delay(1000);
 				Timeout_Expired = false;
 			}
-		}	
+		}
 		free(Bytes_of_Data_In);
-	 }while((!Data_Received) && (Wait_for_Data) && !Timeout_Expired);
+	} while ((!Data_Received) && (Wait_for_Data) && !Timeout_Expired);
 }
 
 //-Attempt Connection to WiFi
@@ -367,13 +368,13 @@ void Connect_to_WiFi(void)
 {
 	int attempt_count = 20;
 	bool network_available = false;
-	
+
 	WiFi.disconnect();
-	Serial.println("Attempting Connection to: ");
-	Serial.print(NetworkName);
+	Serial.print("Attempting Connection to: ");
+	Serial.println(NetworkName);
 
 	//Check If Desired Network is available, Return if unavailable
-	int n = WiFi.scanNetworks(); 
+	int n = WiFi.scanNetworks();
 	if (n == 0)
 	{
 		Serial.println("No Networks Found. Cannot Connect!");
@@ -395,7 +396,7 @@ void Connect_to_WiFi(void)
 			return;
 		}
 	}
-	
+
 	//If Network Available, Attempt Connection, Return if failed
 	WiFi.begin(NetworkName.c_str(), NetworkPassword.c_str());
 	while (WiFi.status() != WL_CONNECTED)
@@ -449,7 +450,7 @@ byte* receive_Data_From_Server(int &no_of_bytes_received)
 		Serial.print("No of Bytes Received: ");
 		Serial.println(no_of_bytes_received);
 	}
-	
+
 	return ptr_Bytes_of_Data_In;
 } //END receive_Data_From_Server
 
@@ -479,7 +480,7 @@ byte* setup_mode_receive_Data_via_Serial(int &no_of_bytes_received)
 }
 
 /*-Returns Type of Command if a Command is Received, else Returns No_Command
-  -Passes Data to be Processed to Appropriate Processing Routine*/
+-Passes Data to be Processed to Appropriate Processing Routine*/
 int Data_Identification_Protocol(byte *Bytes_of_Data_In, int &no_of_Bytes_Received)
 {
 	//Data_Identification_Protocol Variables
@@ -491,12 +492,12 @@ int Data_Identification_Protocol(byte *Bytes_of_Data_In, int &no_of_Bytes_Receiv
 	int Num_Bytes_in_Payload;
 	byte *Data_Payload = NULL; //Will point array of byes which is Data_Payload
 
-	//Print out Data to be Identified:
-	/*Serial.println("Data Identification Protocol Dealing with: ");
-	for (int i = 0; i < no_of_Bytes_Received; i++)
-	{
-		Serial.println(Bytes_of_Data_In[i]);
-	}*/
+							   //Print out Data to be Identified:
+							   /*Serial.println("Data Identification Protocol Dealing with: ");
+							   for (int i = 0; i < no_of_Bytes_Received; i++)
+							   {
+							   Serial.println(Bytes_of_Data_In[i]);
+							   }*/
 
 	if (no_of_Bytes_Received > 12) //If Frame is Valid, i.e. meets minimum no. of bytes
 	{
@@ -516,9 +517,9 @@ int Data_Identification_Protocol(byte *Bytes_of_Data_In, int &no_of_Bytes_Receiv
 			Data_End += (char)Bytes_of_Data_In[i + 1];
 			Data_End += (char)Bytes_of_Data_In[i + 2];
 			Data_End += (char)Bytes_of_Data_In[i + 3];
-			
+
 			if (Data_End == "|ED|") {
-				Data_End_Point = i-1;
+				Data_End_Point = i - 1;
 				break;
 			}
 		}
@@ -542,7 +543,7 @@ int Data_Identification_Protocol(byte *Bytes_of_Data_In, int &no_of_Bytes_Receiv
 				j++;
 			}
 		}
-		
+
 	}
 	else
 	{
@@ -560,13 +561,13 @@ int Data_Identification_Protocol(byte *Bytes_of_Data_In, int &no_of_Bytes_Receiv
 	Serial.println(Data_End_Point);
 	Serial.print("Number of Bytes in Payload: ");
 	Serial.println(Num_Bytes_in_Payload);
-	
+
 	//Print out Payload only
 	/*Serial.println("Data Payload:");
 	Serial.print("|");
 	for (int i = 0; i < Num_Bytes_in_Payload; i++) {
-		Serial.print(Data_Payload[i]);
-		Serial.print("|");
+	Serial.print(Data_Payload[i]);
+	Serial.print("|");
 	}
 	Serial.println("\n");
 	Serial.println("");*/
@@ -577,7 +578,7 @@ int Data_Identification_Protocol(byte *Bytes_of_Data_In, int &no_of_Bytes_Receiv
 		Serial.println("Passing to Command Processing Fcn");
 		//Pass to Command Processing Function
 		int command_processing_result = process_received_command(Data_Payload, Num_Bytes_in_Payload);
-		
+
 		//Interpret Return value of Command Processing Function
 		switch (command_processing_result) {
 		case No_Command: {
@@ -610,9 +611,9 @@ int Data_Identification_Protocol(byte *Bytes_of_Data_In, int &no_of_Bytes_Receiv
 
 	else if (Data_ID == "|ND|") //Network Details Were Received
 	{
-		process_received_network_details(Data_Payload, Num_Bytes_in_Payload);
+		process_received_network_details(Data_Payload, Num_Bytes_in_Payload, false);
 	}//END else if (Data_ID == "|ND|")
-	
+
 	return No_Command;
 }
 
@@ -621,143 +622,143 @@ int Data_Identification_Protocol(byte *Bytes_of_Data_In, int &no_of_Bytes_Receiv
 //|CM| Command Processing
 int process_received_command(byte *Data_Payload, int &Num_Bytes_in_Payload)
 {
-String Command = "";
-for (int i = 0; i < Num_Bytes_in_Payload; i++)
-{
-	Command += (char)Data_Payload[i];
-}
-Serial.print("Command to Process is: ");
-Serial.println(Command);
+	String Command = "";
+	for (int i = 0; i < Num_Bytes_in_Payload; i++)
+	{
+		Command += (char)Data_Payload[i];
+	}
+	Serial.print("Command to Process is: ");
+	Serial.println(Command);
 
-if (Command == "Send") {
-	if (Operating_Mode == Normal_Mode) 
-	{
-		return Send_Data_To_Server;
-	}
-	else
-	{
-		Serial.println("This Command only Valid in Normal Operating Mode!");
-		return No_Command;
-	}
-}
-
-else if (Command == "Receive")
-{
-	if (Operating_Mode == Normal_Mode) {
-		return Receive_Data_From_Server;
-	}
-	else
-	{
-		Serial.println("This Command only Valid in Normal Operating Mode!");
-		return No_Command;
-	}
-}
-
-else if (Command == "RunSched") {
-	if (Operating_Mode == Normal_Mode) {
-		Serial.println("Server says to Run Schedule");
-		return No_Command;
-	}
-	else
-	{
-		Serial.println("This Command only Valid in Normal Operating Mode!");
-		return No_Command;
-	}
-}
-
-else if (Command == "OFF") {
-	if (Operating_Mode == Normal_Mode) {
-		Serial.println("Server says to Turn OFF Major Appliance");
-		return No_Command;
-	}
-	else
-	{
-		Serial.println("This Command only Valid in Normal Operating Mode!");
-		return No_Command;
-	}
-}
-
-else if (Command == "ON") {
-	if (Operating_Mode == Normal_Mode) {
-		Serial.println("Server says to Turn ON Major Appliance");
-		return No_Command;
-	}
-	else
-	{
-		Serial.println("This Command only Valid in Normal Operating Mode!");
-		return No_Command;
-	}
-}
-
-else if (Command == "Scan") //Display Available WiFi Networks to User
-{
-	int n = WiFi.scanNetworks(); //No of Networks found
-	if (n == 0)
-		Serial.println("No Networks Found");
-	else
-	{
-		Serial.print(n);
-		Serial.println(" Networks Found:");
-		for (int i = 0; i < n; ++i)
+	if (Command == "Send") {
+		if (Operating_Mode == Normal_Mode)
 		{
-			// Print SSID and RSSI for each network found
-			Serial.print(i + 1);
-			Serial.print(": ");
-			Serial.print(WiFi.SSID(i));
-			Serial.print(" (");
-			Serial.print(WiFi.RSSI(i));
-			Serial.print(")");
-			Serial.println((WiFi.encryptionType(i) == ENC_TYPE_NONE) ? " " : "*");
-			delay(10);
+			return Send_Data_To_Server;
+		}
+		else
+		{
+			Serial.println("This Command only Valid in Normal Operating Mode!");
+			return No_Command;
 		}
 	}
-	return No_Command;
-}
 
-else if (Command == "Connect") //Connect to WiFi Network
-{
-	Connect_to_WiFi();
-}
+	else if (Command == "Receive")
+	{
+		if (Operating_Mode == Normal_Mode) {
+			return Receive_Data_From_Server;
+		}
+		else
+		{
+			Serial.println("This Command only Valid in Normal Operating Mode!");
+			return No_Command;
+		}
+	}
 
-else if (Command == "Disconnect") //Connect to WiFi Network
-{
-	if (WiFi.status() == WL_CONNECTED)
-		WiFi.disconnect();
+	else if (Command == "RunSched") {
+		if (Operating_Mode == Normal_Mode) {
+			Serial.println("Server says to Run Schedule");
+			return No_Command;
+		}
+		else
+		{
+			Serial.println("This Command only Valid in Normal Operating Mode!");
+			return No_Command;
+		}
+	}
+
+	else if (Command == "OFF") {
+		if (Operating_Mode == Normal_Mode) {
+			Serial.println("Server says to Turn OFF Major Appliance");
+			return No_Command;
+		}
+		else
+		{
+			Serial.println("This Command only Valid in Normal Operating Mode!");
+			return No_Command;
+		}
+	}
+
+	else if (Command == "ON") {
+		if (Operating_Mode == Normal_Mode) {
+			Serial.println("Server says to Turn ON Major Appliance");
+			return No_Command;
+		}
+		else
+		{
+			Serial.println("This Command only Valid in Normal Operating Mode!");
+			return No_Command;
+		}
+	}
+
+	else if (Command == "Scan") //Display Available WiFi Networks to User
+	{
+		int n = WiFi.scanNetworks(); //No of Networks found
+		if (n == 0)
+			Serial.println("No Networks Found");
+		else
+		{
+			Serial.print(n);
+			Serial.println(" Networks Found:");
+			for (int i = 0; i < n; ++i)
+			{
+				// Print SSID and RSSI for each network found
+				Serial.print(i + 1);
+				Serial.print(": ");
+				Serial.print(WiFi.SSID(i));
+				Serial.print(" (");
+				Serial.print(WiFi.RSSI(i));
+				Serial.print(")");
+				Serial.println((WiFi.encryptionType(i) == ENC_TYPE_NONE) ? " " : "*");
+				delay(10);
+			}
+		}
+		return No_Command;
+	}
+
+	else if (Command == "Connect") //Connect to WiFi Network
+	{
+		Connect_to_WiFi();
+	}
+
+	else if (Command == "Disconnect") //Connect to WiFi Network
+	{
+		if (WiFi.status() == WL_CONNECTED)
+			WiFi.disconnect();
+		else
+			Serial.println("WiFi Not Connected");
+	}
+
+	else if (Command == "Status") //Display Status of Connection
+	{
+		Serial.println("-----ALL RELEVANT WiFi STATUS INFORMATION-----");
+		Serial.println("Stored Network Details are:");
+		Serial.print("Network Name: ");
+		Serial.println(NetworkName);
+		Serial.print("Network Password: ");
+		Serial.println(NetworkPassword);
+		Serial.println("");
+
+		Serial.println("Connection Details:");
+		if (WiFi.status() == WL_CONNECTED) {
+			Serial.print("Connected to: "); Serial.println(WiFi.SSID());
+			Serial.print("Signal Strength: "); Serial.print(WiFi.RSSI()); Serial.println(" dBm");
+			Serial.print("Gateway Address: "); Serial.println(WiFi.gatewayIP());
+			Serial.print("IP Address: "); Serial.println(WiFi.localIP());
+		}
+		else {
+			Serial.println("Not Connected to any WiFi Networks");
+		}
+	}
+
+	else if (Command == "Done")
+	{
+		Serial.println("Starting Normal Mode...");
+		Operating_Mode = Normal_Mode;
+	}
+
 	else
-		Serial.println("WiFi Not Connected");
-}
-
-else if (Command == "Status") //Display Status of Connection
-{
-	Serial.println("-----ALL RELEVANT WiFi STATUS INFORMATION-----");
-	Serial.println("Stored Network Details are:");
-	Serial.print("Network Name: ");
-	Serial.println(NetworkName);
-	Serial.print("Network Password: ");
-	Serial.println(NetworkPassword);
-	Serial.println("");
-
-	Serial.println("Connection Details:");
-	if (WiFi.status() == WL_CONNECTED) {
-		Serial.print("Connected to: "); Serial.println(WiFi.SSID());
-		Serial.print("Signal Strength: "); Serial.print(WiFi.RSSI()); Serial.println(" dBm");
-		Serial.print("Gateway Address: "); Serial.println(WiFi.gatewayIP());
-		Serial.print("IP Address: "); Serial.println(WiFi.localIP());
-	}
-	else {
-		Serial.println("Not Connected to any WiFi Networks");
-	}
-}
-
-else if (Command == "Done")
-{
-	Serial.println("Starting Normal Mode...");
-	Operating_Mode = Normal_Mode;
-}
-
-else
-Serial.println("No Valid Command Received");
-return No_Command;
+		Serial.println("No Valid Command Received");
+	return No_Command;
 }
 //|SI| Scheduling Processing
 
@@ -787,7 +788,7 @@ void process_received_schedule(byte *Data_Payload, int &Num_Bytes_in_Payload, bo
 
 	Serial.println("New Schdule Data Received, Processing Schedule Now...");
 	int Day = 0, Hour_Start = 0, Minute_Start = 0, Hour_End = 0, Minute_End = 0;
-	
+
 	//First Clear out Old Schedule
 	for (int Day_index = 0; Day_index < 7; Day_index++)
 		for (int hour_index = 0; hour_index < 24; hour_index++)
@@ -795,16 +796,16 @@ void process_received_schedule(byte *Data_Payload, int &Num_Bytes_in_Payload, bo
 				device_schedule.hours_on_off[Day_index][hour_index][minute_index] = false;
 
 	//Decode Received data device_schedule
-	for (int i = 0; i < Num_Bytes_in_Payload; i+=10) 
+	for (int i = 0; i < Num_Bytes_in_Payload; i += 10)
 	{//For each schedule in frame received decode and load into device_schedule
 		for (int j = i; j < i + 10; j++)
 		{
-			if (j == i + 1) 
+			if (j == i + 1)
 				Day = (char)Data_Payload[j] - 48;
 			else if (j == i + 2) {
 				String temp_Hour_Start = "";
 				temp_Hour_Start += (char)Data_Payload[j];
-				temp_Hour_Start += (char)Data_Payload[j+1];
+				temp_Hour_Start += (char)Data_Payload[j + 1];
 				Hour_Start = temp_Hour_Start.toInt();
 			}
 			else if (j == i + 4) {
@@ -896,7 +897,7 @@ void process_received_schedule(byte *Data_Payload, int &Num_Bytes_in_Payload, bo
 			Serial.println("");
 		}
 	}
-	
+
 }
 //|TI| Time Processing
 void process_received_time(byte *Data_Payload, int &Num_Bytes_in_Payload)
@@ -904,12 +905,35 @@ void process_received_time(byte *Data_Payload, int &Num_Bytes_in_Payload)
 	Serial.println("Processing a Time...");
 }
 //|ND| Network Details Processing
-void process_received_network_details(byte *Data_Payload, int &Num_Bytes_in_Payload)
+void process_received_network_details(byte *Data_Payload, int &Num_Bytes_in_Payload, bool startup)
 {
+	if (!startup)
+	{
+		Serial.println("New Network Details Data Received, Processing them Now...");
+		//Save Received Scheduling Info to Memory
+		File f = SPIFFS.open("/Network_Details", "w");
+		if (!f) {
+			Serial.println("File Open Failed");
+		}
+		else
+		{
+			Serial.println("File Open Successfull! Saving to Memory...");
+			for (int i = 0; i < Num_Bytes_in_Payload; i++)
+			{
+				f.write(Data_Payload[i]);
+			}
+			f.close();
+		}
+	}
+	else
+	{
+		Serial.println("Loading Schedule Data retrieved from Memory");
+	}
+
 	Serial.println("Processing Network Details...");
 	String SSID = "";
 	String Password = "";
-	
+
 	//Extract NetworkName
 	int i = 0;
 	while (((char)Data_Payload[i] != '|') && i < Num_Bytes_in_Payload)
@@ -928,7 +952,7 @@ void process_received_network_details(byte *Data_Payload, int &Num_Bytes_in_Payl
 			i++;
 		}
 	}
-	
+
 	NetworkName = SSID;
 	NetworkPassword = Password;
 	Serial.print("Network Name: ");
@@ -1016,7 +1040,7 @@ void Display_Measurements(void)
 	if (dir.next()) //Check for any files in directory Power_Readings
 	{
 		no_of_readings++;
-		while (dir.next()) 
+		while (dir.next())
 		{
 			no_of_readings++;
 		}
@@ -1024,23 +1048,23 @@ void Display_Measurements(void)
 	Serial.println("Measurements Directory Contains: ");
 	Serial.print(no_of_readings);
 	Serial.println(" Power Readings");
-			
-			/*Serial.print("File: ");
-			Serial.println(dir.fileName());
 
-			File f = dir.openFile("r");
-			if (!f) {  //Check if File Opened Successfully
-			Serial.println("file open failed");
-			}
-			else { //If it Did then Reconstruct Measurement Structure
-			for (int i = 0; i < sizeof(measurement_to_send); i++)
-			{
-			ptr_to_measurement_to_send_bytes[i] = f.read();
-			}
-			Serial.print("With Measurement Value: ");
-			Serial.println(measurement_to_send.measurement);
-			Serial.println("");
-			}*/
+	/*Serial.print("File: ");
+	Serial.println(dir.fileName());
+
+	File f = dir.openFile("r");
+	if (!f) {  //Check if File Opened Successfully
+	Serial.println("file open failed");
+	}
+	else { //If it Did then Reconstruct Measurement Structure
+	for (int i = 0; i < sizeof(measurement_to_send); i++)
+	{
+	ptr_to_measurement_to_send_bytes[i] = f.read();
+	}
+	Serial.print("With Measurement Value: ");
+	Serial.println(measurement_to_send.measurement);
+	Serial.println("");
+	}*/
 }
 
 //Process and Send Data to Server
@@ -1066,8 +1090,8 @@ void Send_New_Data_to_Server(void)
 				Serial.println("file open failed");
 			}
 			else { //If it Did then pack bytes to Send
-				//Serial.print("File Size: ");
-				//Serial.println(f.size());
+				   //Serial.print("File Size: ");
+				   //Serial.println(f.size());
 				for (int i = 0; i < f.size(); i++)
 				{
 					data_to_send[i + 7] = f.read();
@@ -1168,8 +1192,8 @@ void time_test(void) {
 	RtcDateTime now = Rtc.GetDateTime();
 	printDateTime(now);
 	RtcTemperature temp = Rtc.GetTemperature();
-	//Serial.print(temp.AsFloat());
-	//Serial.println("C");
+	Serial.print(temp.AsFloat());
+	Serial.println("C");
 }
 void printDateTime(const RtcDateTime& dt)
 {
@@ -1203,7 +1227,7 @@ void Retrieve_Schedule_information(void)
 			Serial.print("Size of Scheduling Data: "); Serial.println(Num_Bytes_in_Payload);
 
 			Data_Payload = (byte*)realloc(Data_Payload, Num_Bytes_in_Payload*sizeof(byte));
-			
+
 			for (int i = 0; i < Num_Bytes_in_Payload; i++)
 			{
 				Data_Payload[i] = f.read();
@@ -1212,8 +1236,41 @@ void Retrieve_Schedule_information(void)
 			free(Data_Payload);
 		}
 	}
-	else 
+	else
 	{
 		Serial.println("No Stored Scheduling Data Found");
+	}
+}
+void Retrieve_network_details(void)
+{
+	byte *Data_Payload = NULL;
+	int Num_Bytes_in_Payload = 0;
+
+	if (SPIFFS.exists("/Network_Details"))
+	{
+		Serial.println("Retrieving Stored Network Details");
+
+		File f = SPIFFS.open("/Network_Details", "r");
+		if (!f) {
+			Serial.println("File open failed!");
+		}
+		else {
+			Serial.println("File open successful!");
+			Num_Bytes_in_Payload = f.size();
+			Serial.print("Size of Network Details Data: "); Serial.println(Num_Bytes_in_Payload);
+
+			Data_Payload = (byte*)realloc(Data_Payload, Num_Bytes_in_Payload*sizeof(byte));
+
+			for (int i = 0; i < Num_Bytes_in_Payload; i++)
+			{
+				Data_Payload[i] = f.read();
+			}
+			process_received_network_details(Data_Payload, Num_Bytes_in_Payload, true);
+			free(Data_Payload);
+		}
+	}
+	else
+	{
+		Serial.println("No Stored Network Details Found");
 	}
 }
