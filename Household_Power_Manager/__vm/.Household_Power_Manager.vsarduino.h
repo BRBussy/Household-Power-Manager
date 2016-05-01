@@ -10,7 +10,6 @@
 
 #ifndef _VSARDUINO_H_
 #define _VSARDUINO_H_
-#define _VMDEBUG 1
 #define __ets__
 #define ICACHE_FLASH
 #define F_CPU 80000000L

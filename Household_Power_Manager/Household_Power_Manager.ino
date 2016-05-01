@@ -4,7 +4,6 @@
  Author:	Bernard
 */
 #include <Arduino.h> 
-#include <SPI.h>
 #include <Wire.h>
 #include <RtcUtility.h>
 #include <RtcDS3231.h>
@@ -81,8 +80,8 @@ struct major_appliance_status { //Declare major_appliance_status struct type
 //Global Variable Declarations
 
 	//Network Details --SAVE to EEPROM
-	String NetworkName = "BernysWAP";
-	String NetworkPassword = "bionicle123#";
+	String NetworkName = "";
+	String NetworkPassword = "";
 	
 	//Client Server Details
 	String Host = "10.0.0.9";
@@ -113,12 +112,10 @@ void setup() {
 	//Retrieve old device schedule from memory;
 	Retrieve_Schedule_information();
 	//Retrieve network details from memory;
+	Retrieve_Schedule_information();
 	
 	//Software Setup
 	Operating_Mode = Setup_Mode;
-
-	//Temporary Setups
-	randomSeed(11);
 }//End setup();
 
 // the loop function runs over and over again until power down or reset
@@ -249,11 +246,11 @@ void loop() {
 
 	case Normal_Mode:
 	{
-		float measurement = random(700);
+		float measurement = 22.3;
 		int ID = Major_Appliance;
 		
 		Send_Receive_Protocol();
-		//time_test();
+		time_test();
 		if (Take_Measurement_counter <= 5) { 
 			Take_Measurement_counter++; 
 		}
@@ -1172,8 +1169,8 @@ void time_test(void) {
 	RtcDateTime now = Rtc.GetDateTime();
 	printDateTime(now);
 	RtcTemperature temp = Rtc.GetTemperature();
-	Serial.print(temp.AsFloat());
-	Serial.println("C");
+	//Serial.print(temp.AsFloat());
+	//Serial.println("C");
 }
 void printDateTime(const RtcDateTime& dt)
 {
