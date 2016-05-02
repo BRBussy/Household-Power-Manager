@@ -52,8 +52,8 @@ struct major_appliance_status { //Declare major_appliance_status struct type
 //Definitions
 #define BAUD 115200
 //Device IDs
-#define Total_Household 0
-#define Major_Appliance 1
+#define Total_Household 1
+#define Major_Appliance_ID 2
 //Modes
 #define Setup_Mode 0
 #define Normal_Mode 1
@@ -61,6 +61,9 @@ struct major_appliance_status { //Declare major_appliance_status struct type
 #define SetupModeButton 0
 #define SDA_pin 2
 #define SCL_pin 14
+#define A 12
+#define B 16
+#define Major_Appliance 13
 //Statuses
 #define WifiConnected 0
 #define ConnectedtoServer 1
@@ -77,9 +80,9 @@ struct major_appliance_status { //Declare major_appliance_status struct type
 //RTC Definitions
 #define countof(a) (sizeof(a) / sizeof(a[0]))
 //Device_Operation_Mode
-#define ON 0;
-#define OFF 1;
-#define Scheduled 2;
+#define ON 0
+#define OFF 1
+#define Scheduled 2
 
 //Global Variable Declarations
 
@@ -111,6 +114,12 @@ void setup() {
 	//Hardware Setup, pin modes etc.
 	Serial.begin(BAUD);
 	pinMode(SetupModeButton, INPUT);
+	pinMode(A, OUTPUT);// to set A of the multiplexer
+	pinMode(B, OUTPUT); // to set B of the multiplexer
+	pinMode(Major_Appliance, OUTPUT); //Kettle
+	digitalWrite(Major_Appliance, LOW); //Kettle off
+
+
 	RTC_SETUP();
 	File_System_Setup();
 
@@ -261,8 +270,6 @@ void loop() {
 	{
 		//Very Temporary Variables
 		time_test();
-		float measurement = 22.5;
-		int ID = Major_Appliance;
 		
 		Send_Receive_Protocol();
 		//time_test();
@@ -271,7 +278,8 @@ void loop() {
 		}
 		else {
 			//Take Measurement and Store it
-			Store_power_measurement(measurement, ID);
+			Store_power_measurement(get_power_measurement(Major_Appliance_ID), Major_Appliance_ID);
+			Store_power_measurement(get_power_measurement(Total_Household), Total_Household);
 			Take_Measurement_counter = 0;
 		}
 		if (Take_Measurement_counter == 0) {
@@ -1276,4 +1284,67 @@ void Retrieve_network_details(void)
 	{
 		Serial.println("No Stored Network Details Found");
 	}
+}
+
+//Measurement Routines
+float get_power_measurement(int Device_ID)
+{
+	digitalWrite(Major_Appliance, HIGH); //Kettle on
+
+	float total_CurrentCalculation = 0;
+	float sumSquaredCurrent = 0;
+	float CurrentReading = 0;
+	float array_of_samples[200] = { 0 };
+
+	//Select Channel to measure appliance current BA = 00 for channel 0
+	if (Device_ID == Major_Appliance_ID)
+	{
+		digitalWrite(16, LOW); //B
+		digitalWrite(12, LOW); //A
+		delay(200); //Let multiplexer settle
+		//Sample Appliance Current
+		for (int i = 0; i < 200; i++)
+		{
+			array_of_samples[i] = analogRead(A0); //Make reading and load into array
+		}
+		//Average Samples to get RMS Value
+		for (int i = 0; i < 200; i++)
+		{
+			CurrentReading = array_of_samples[i] * (3.0 / 1024.0);
+			sumSquaredCurrent += (CurrentReading * CurrentReading);
+		}
+		//Calculate Current
+		total_CurrentCalculation = sqrt(sumSquaredCurrent / 200.0);
+		total_CurrentCalculation = (1.414*total_CurrentCalculation + 0.66) / 0.283;
+		Serial.print("Appliance Current is: "); Serial.println(total_CurrentCalculation);
+		Serial.print("Appliance Power is: "); Serial.println(total_CurrentCalculation * 220);
+		Serial.println("");
+		return total_CurrentCalculation * 220;
+	}
+	else
+	{
+		//Select Channel to measure total current BA = 10 for channel 0
+		digitalWrite(16, HIGH); //B
+		digitalWrite(12, LOW);  //A
+		delay(500); //Let multiplexer settle
+		//Sample Total Current
+		for (int i = 0; i < 200; i++)
+		{
+			array_of_samples[i] = analogRead(A0); //Make reading and load into array
+		}
+		//Average Samples to get RMS Value
+		for (int i = 0; i < 200; i++)
+		{
+			CurrentReading = array_of_samples[i] * (3.0 / 1024.0);
+			sumSquaredCurrent += (CurrentReading * CurrentReading);
+		}
+		//Calculate Current
+		total_CurrentCalculation = sqrt(sumSquaredCurrent / 200.0);
+		total_CurrentCalculation = (1.414*total_CurrentCalculation + 0.66) / 0.1414;
+		Serial.print("Total Current is: "); Serial.println(total_CurrentCalculation);
+		Serial.print("Total Power is: "); Serial.println(total_CurrentCalculation * 220);
+		Serial.println("");
+		return total_CurrentCalculation * 220;
+	}
+
 }
