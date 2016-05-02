@@ -129,6 +129,7 @@ void setup() {
  // the loop function runs over and over again until power down or reset
 void loop() {
 	//Serial.begin(BAUD);
+	
 	delay(10);
 
 	//Check if User is Requesting SetupMode
@@ -259,6 +260,7 @@ void loop() {
 	case Normal_Mode:
 	{
 		//Very Temporary Variables
+		time_test();
 		float measurement = 22.5;
 		int ID = Major_Appliance;
 		
@@ -269,11 +271,11 @@ void loop() {
 		}
 		else {
 			//Take Measurement and Store it
-			//Store_power_measurement(measurement, ID);
+			Store_power_measurement(measurement, ID);
 			Take_Measurement_counter = 0;
 		}
 		if (Take_Measurement_counter == 0) {
-			//Display_Measurements();
+			Display_Measurements();
 		}
 
 
@@ -1114,7 +1116,7 @@ void Send_New_Data_to_Server(void)
 	}
 	else
 	{
-		client.println("|D|No_New_Data|ED|");
+		client.println("|D||CM|No_New_Data|ED|");
 	}
 }
 
@@ -1178,6 +1180,7 @@ void File_System_Setup(void)
 	//Serial.println("SPIFFS formatted");
 }
 void time_test(void) {
+	Serial.println("");
 	if (!Rtc.IsDateTimeValid())
 	{
 		// Common Cuases:
@@ -1185,11 +1188,15 @@ void time_test(void) {
 		Serial.println("RTC lost confidence in the DateTime!");
 	}
 
+	Serial.print("The Time now is: ");
 	RtcDateTime now = Rtc.GetDateTime();
 	printDateTime(now);
 	RtcTemperature temp = Rtc.GetTemperature();
 	Serial.print(temp.AsFloat());
+	Serial.println("");
+	Serial.print("The Temperature now is: ");
 	Serial.println("C");
+	Serial.println("");
 }
 void printDateTime(const RtcDateTime& dt)
 {
