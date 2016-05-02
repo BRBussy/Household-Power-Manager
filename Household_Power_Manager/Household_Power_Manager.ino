@@ -67,6 +67,7 @@ struct major_appliance_status { //Declare major_appliance_status struct type
 //Statuses
 #define WifiConnected 0
 #define ConnectedtoServer 1
+#define Appliance_ON 2
 //WiFi Data Recieve Flags
 #define New_Data_for_Client 0
 #define Send_Data_to_Server 1
@@ -106,7 +107,7 @@ FSInfo fs_info;
 int Take_Measurement_counter = 5;
 int Operating_Mode;
 int Device_Operating_Mode;
-bool Statuses[2] = {};
+bool Statuses[3] = {};
 bool Setup_mode_print_waiting_message = true;
 
 // the setup function runs once when you press reset or power the board
@@ -123,8 +124,8 @@ void setup() {
 	RTC_SETUP();
 	File_System_Setup();
 
-	//Device Operation Mode Defaults to OFF
-	Device_Operating_Mode = OFF;
+	//Device Operation Mode Defaults to Scheduled
+	Device_Operating_Mode = Scheduled;
 
 	//Retrieve old device schedule from memory;
 	Retrieve_Schedule_information();
@@ -146,7 +147,8 @@ void loop() {
 		Operating_Mode = Setup_Mode;
 	}
 
-	//--------------------Check if Appliance Should be on/off. Not in Particular Mode-------
+	device_on_or_off(); //Check if Device Should be on/off
+	time_test(); //Print Time
 
 	switch (Operating_Mode) {
 	case Setup_Mode:
@@ -267,12 +269,10 @@ void loop() {
 	}//End Setup Mode
 
 	case Normal_Mode:
-	{
-		//Very Temporary Variables
-		time_test();
-		
+	{	
 		Send_Receive_Protocol();
-		//time_test();
+		Display_Measurements();
+
 		if (Take_Measurement_counter <= 5) {
 			Take_Measurement_counter++;
 		}
@@ -282,10 +282,6 @@ void loop() {
 			Store_power_measurement(get_power_measurement(Total_Household), Total_Household);
 			Take_Measurement_counter = 0;
 		}
-		if (Take_Measurement_counter == 0) {
-			Display_Measurements();
-		}
-
 
 		//delay(500);
 		break;
@@ -1004,8 +1000,8 @@ void Store_power_measurement(const float &measurement, const int &ID)
 	Measurement_Name += measurement_to_store.when_made.second;
 
 	Serial.println();
-	Serial.print("Name of file to Store Measurement in is: ");
-	Serial.println(Measurement_Name);
+	//Serial.print("Name of file to Store Measurement in is: ");
+	//Serial.println(Measurement_Name);
 	//Serial.print("No Of Bytes in Measurement is: ");
 	//Serial.print(sizeof(measurement_to_store));
 	//Serial.println();
@@ -1019,7 +1015,7 @@ void Store_power_measurement(const float &measurement, const int &ID)
 		}
 		else
 		{
-			Serial.println("File Open Successfull!");
+			//Serial.println("File Open Successfull!");
 			file_open_success = true;
 			for (int i = 0; i < sizeof(measurement_to_store); i++)
 			{
@@ -1051,7 +1047,7 @@ void Display_Measurements(void)
 			no_of_readings++;
 		}
 	}
-	Serial.println("Measurements Directory Contains: ");
+	Serial.print("Measurements Directory Contains: ");
 	Serial.print(no_of_readings);
 	Serial.println(" Power Readings");
 
@@ -1200,10 +1196,10 @@ void time_test(void) {
 	RtcDateTime now = Rtc.GetDateTime();
 	printDateTime(now);
 	RtcTemperature temp = Rtc.GetTemperature();
-	Serial.print(temp.AsFloat());
+	
 	Serial.println("");
-	Serial.print("The Temperature now is: ");
-	Serial.println("C");
+	Serial.print("The Temperature now is: "); Serial.print(temp.AsFloat());
+	Serial.println(" C");
 	Serial.println("");
 }
 void printDateTime(const RtcDateTime& dt)
@@ -1286,18 +1282,18 @@ void Retrieve_network_details(void)
 	}
 }
 
-//Measurement Routines
+//Measurement Routine
 float get_power_measurement(int Device_ID)
 {
-	digitalWrite(Major_Appliance, HIGH); //Kettle on
 
 	float total_CurrentCalculation = 0;
 	float sumSquaredCurrent = 0;
 	float CurrentReading = 0;
 	float array_of_samples[200] = { 0 };
+	float Power_Measurement = 0;
 
 	//Select Channel to measure appliance current BA = 00 for channel 0
-	if (Device_ID == Major_Appliance_ID)
+	if ((Device_ID == Major_Appliance_ID) && Statuses[Appliance_ON])
 	{
 		digitalWrite(16, LOW); //B
 		digitalWrite(12, LOW); //A
@@ -1316,12 +1312,19 @@ float get_power_measurement(int Device_ID)
 		//Calculate Current
 		total_CurrentCalculation = sqrt(sumSquaredCurrent / 200.0);
 		total_CurrentCalculation = (1.414*total_CurrentCalculation + 0.66) / 0.283;
+		Power_Measurement = total_CurrentCalculation * 220;
+
+		if (total_CurrentCalculation <= 6)
+		{
+			Power_Measurement = 0;
+			total_CurrentCalculation = 0;
+		}
+
 		Serial.print("Appliance Current is: "); Serial.println(total_CurrentCalculation);
-		Serial.print("Appliance Power is: "); Serial.println(total_CurrentCalculation * 220);
+		Serial.print("Appliance Power is: "); Serial.println(Power_Measurement);
 		Serial.println("");
-		return total_CurrentCalculation * 220;
 	}
-	else
+	else if (Device_ID == Total_Household)
 	{
 		//Select Channel to measure total current BA = 10 for channel 0
 		digitalWrite(16, HIGH); //B
@@ -1341,10 +1344,76 @@ float get_power_measurement(int Device_ID)
 		//Calculate Current
 		total_CurrentCalculation = sqrt(sumSquaredCurrent / 200.0);
 		total_CurrentCalculation = (1.414*total_CurrentCalculation + 0.66) / 0.1414;
+		Power_Measurement = total_CurrentCalculation * 220;
+		
+		if (total_CurrentCalculation <= 6)
+		{
+			Power_Measurement = 0;
+			total_CurrentCalculation = 0;
+		}
+
 		Serial.print("Total Current is: "); Serial.println(total_CurrentCalculation);
-		Serial.print("Total Power is: "); Serial.println(total_CurrentCalculation * 220);
+		Serial.print("Total Power is: "); Serial.println(Power_Measurement);
 		Serial.println("");
-		return total_CurrentCalculation * 220;
+	}
+	else //Appliance Power Measurement, and Appliance is Off
+	{
+		Power_Measurement = 0;
+		total_CurrentCalculation = 0;
+		Serial.print("Appliance Current is: "); Serial.println(total_CurrentCalculation);
+		Serial.print("Appliance Power is: "); Serial.println(Power_Measurement);
 	}
 
+	return Power_Measurement;
+}
+
+//Device on or off update
+void device_on_or_off(void)
+{
+	RtcDateTime now = Rtc.GetDateTime();
+	int hour = now.Hour();
+	int minute = now.Minute();
+
+	if ((hour > 0 && hour < 24) && (minute > 0 && minute < 60))
+	{
+		Serial.println("Legitimate Day, Hour and Minute");
+		if (Device_Operating_Mode == OFF) // if device is to be manually turned off
+		{
+			Serial.println("Device Permanently OFF");
+			digitalWrite(13, LOW);
+			Statuses[Appliance_ON] = false;
+		}
+		else if (Device_Operating_Mode == ON) //if device is to be manually turned on
+		{
+			Serial.println("Device Permanently ON");
+			digitalWrite(13, HIGH);
+			Statuses[Appliance_ON] = true;
+		}
+		else 
+		{
+			Serial.println("Device Operating Under Schedule");
+			if (device_schedule.hours_on_off[1][hour][minute])
+			{
+				if (device_schedule.hours_on_off[1][hour][minute + 1])
+				{
+					Serial.println("Device ON Under Schedule");
+					digitalWrite(13, HIGH);
+					Statuses[Appliance_ON] = true;
+				}
+				else
+				{
+					Serial.println("Device OFF Under Schedule");
+					digitalWrite(13, LOW);
+					Statuses[Appliance_ON] = false;
+				}
+
+			}
+			else
+			{
+				Serial.println("Device OFF Under Schedule");
+				digitalWrite(13, LOW);
+				Statuses[Appliance_ON] = false;
+			}
+		}	
+	}
 }
