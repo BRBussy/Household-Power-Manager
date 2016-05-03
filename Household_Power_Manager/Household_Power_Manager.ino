@@ -76,6 +76,10 @@ struct major_appliance_status { //Declare major_appliance_status struct type
 #define Receive_Data_From_Server 2
 //RTC Definitions
 #define countof(a) (sizeof(a) / sizeof(a[0]))
+//Device_Operation_Mode
+#define ON 0;
+#define OFF 1;
+#define Scheduled 2;
 
 //Global Variable Declarations
 
@@ -98,6 +102,7 @@ FSInfo fs_info;
 //Other Uncategorized Variables
 int Take_Measurement_counter = 5;
 int Operating_Mode;
+int Device_Operating_Mode;
 bool Statuses[2] = {};
 bool Setup_mode_print_waiting_message = true;
 
@@ -108,6 +113,9 @@ void setup() {
 	pinMode(SetupModeButton, INPUT);
 	RTC_SETUP();
 	File_System_Setup();
+
+	//Device Operation Mode Defaults to OFF
+	Device_Operating_Mode = OFF;
 
 	//Retrieve old device schedule from memory;
 	Retrieve_Schedule_information();
@@ -127,6 +135,8 @@ void loop() {
 	if (!digitalRead(SetupModeButton)) {
 		Operating_Mode = Setup_Mode;
 	}
+
+	//--------------------Check if Appliance Should be on/off. Not in Particular Mode-------
 
 	switch (Operating_Mode) {
 	case Setup_Mode:
@@ -246,15 +256,17 @@ void loop() {
 
 	case Normal_Mode:
 	{
+		//Very Temporary Variables
 		float measurement = 22.5;
 		int ID = Major_Appliance;
-
+		
 		Send_Receive_Protocol();
 		//time_test();
 		if (Take_Measurement_counter <= 5) {
 			Take_Measurement_counter++;
 		}
 		else {
+			//Take Measurement and Store it
 			//Store_power_measurement(measurement, ID);
 			Take_Measurement_counter = 0;
 		}
@@ -321,7 +333,7 @@ void Send_Receive_Protocol(void)
 						break;
 					}
 					default: { //Received What from Server? -->No_Command
-						Serial.println("No Command Received From Server");
+						//Serial.println("No Command Received From Server");
 						Wait_for_Data = false;
 						break;
 					}//END default case
@@ -655,39 +667,21 @@ int process_received_command(byte *Data_Payload, int &Num_Bytes_in_Payload)
 	}
 
 	else if (Command == "RunSched") {
-		if (Operating_Mode == Normal_Mode) {
-			Serial.println("Server says to Run Schedule");
-			return No_Command;
-		}
-		else
-		{
-			Serial.println("This Command only Valid in Normal Operating Mode!");
-			return No_Command;
-		}
+		Serial.println("Major Appliance will Operate Under Schedule...");
+		Device_Operating_Mode = Scheduled;
+		//Return No Command
 	}
 
 	else if (Command == "OFF") {
-		if (Operating_Mode == Normal_Mode) {
-			Serial.println("Server says to Turn OFF Major Appliance");
-			return No_Command;
-		}
-		else
-		{
-			Serial.println("This Command only Valid in Normal Operating Mode!");
-			return No_Command;
-		}
+		Serial.println("Major Appliance will Turn Off...");
+		Device_Operating_Mode = OFF;
+		//Return No Command
 	}
 
 	else if (Command == "ON") {
-		if (Operating_Mode == Normal_Mode) {
-			Serial.println("Server says to Turn ON Major Appliance");
-			return No_Command;
-		}
-		else
-		{
-			Serial.println("This Command only Valid in Normal Operating Mode!");
-			return No_Command;
-		}
+		Serial.println("Major Appliance will Turn ON...");
+		Device_Operating_Mode = ON;
+		//Return No Command
 	}
 
 	else if (Command == "Scan") //Display Available WiFi Networks to User
