@@ -153,6 +153,8 @@ void loop() {
 		}
 		else {
 			if (Setup_mode_print_waiting_message) {
+				Serial.println("");
+				Serial.println("Setup Mode is active!");
 				Serial.println("Waiting for Serial Data");
 				Setup_mode_print_waiting_message = false;
 			}
