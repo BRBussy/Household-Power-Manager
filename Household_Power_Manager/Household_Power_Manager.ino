@@ -259,7 +259,7 @@ void loop() {
 			Take_Measurement_counter = 0;
 		}
 		if (Take_Measurement_counter == 0) {
-			Display_Measurements();
+			//Display_Measurements();
 		}
 
 
