@@ -133,7 +133,7 @@ void setup() {
 	Retrieve_network_details();
 
 	//Software Setup
-	Operating_Mode = Setup_Mode;
+	Operating_Mode = Normal_Mode;
 }//End setup();
 
  // the loop function runs over and over again until power down or reset
@@ -674,19 +674,19 @@ int process_received_command(byte *Data_Payload, int &Num_Bytes_in_Payload)
 		}
 	}
 
-	else if (Command == "RunSched") {
+	else if (Command == "scheduled") {
 		Serial.println("Major Appliance will Operate Under Schedule...");
 		Device_Operating_Mode = Scheduled;
 		//Return No Command
 	}
 
-	else if (Command == "OFF") {
+	else if (Command == "off") {
 		Serial.println("Major Appliance will Turn Off...");
 		Device_Operating_Mode = OFF;
 		//Return No Command
 	}
 
-	else if (Command == "ON") {
+	else if (Command == "on") {
 		Serial.println("Major Appliance will Turn ON...");
 		Device_Operating_Mode = ON;
 		//Return No Command
